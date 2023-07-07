@@ -49,6 +49,7 @@ void RenderThread::Quit()
 
 void RenderThread::CopyToScreen()
 {
+#ifdef _WIN32
 	HDC hdc = GetDC(hwnd);
 	BITMAPINFO info = { 0 };
 	info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
@@ -60,6 +61,7 @@ void RenderThread::CopyToScreen()
 	info.bmiHeader.biSizeImage = res.x * res.y * sizeof(u32);
 	int t = SetDIBitsToDevice(hdc, 0, 0, res.x, res.y, 0, 0, 0, res.y, colorBuffer.data(), &info, DIB_RGB_COLORS);
 	ReleaseDC(hwnd, hdc);
+#endif
 }
 
 void RenderThread::RunKernels()
