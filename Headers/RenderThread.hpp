@@ -15,15 +15,18 @@
 #include "Kernel.cuh"
 #include "Maths/Maths.hpp"
 
-#define FPS 30
 #define LENGTH 34.90658503988659
 /*
 // 4K
 #define WIDTH 3840
 #define HEIGHT 2160
 */
-#define WIDTH 1920
-#define HEIGHT 1080
+
+struct Parameters
+{
+	Maths::IVec2 targetResolution = Maths::IVec2(1920, 1080);
+	s32 targetFPS = 30;
+};
 
 class RenderThread
 {
@@ -31,7 +34,7 @@ public:
 	RenderThread() {};
 	~RenderThread() {};
 
-	void Init();
+	void Init(const Parameters& params);
 	void Init(HWND hwnd, Maths::IVec2 res);
 	void Resize(Maths::IVec2 newRes);
 	bool HasFinished() const;
@@ -50,6 +53,7 @@ private:
 	std::vector<std::vector<u32>> bufferedFrames;
 	Maths::IVec2 res;
 	Maths::IVec2 storedRes;
+	Parameters params;
 
 	void ThreadFuncRealTime();
 	void ThreadFuncFrames();

@@ -11,9 +11,10 @@ void RenderThread::Init(HWND hwnIn, IVec2 resIn)
 	thread = std::thread(&RenderThread::ThreadFuncRealTime, this);
 }
 
-void RenderThread::Init()
+void RenderThread::Init(const Parameters& paramsIn)
 {
-	res = Vec2(WIDTH, HEIGHT);
+	params = paramsIn;
+	res = IVec2(params.targetResolution.x, params.targetResolution.y);
 	thread = std::thread(&RenderThread::ThreadFuncFrames, this);
 }
 
@@ -124,7 +125,7 @@ void RenderThread::ThreadFuncFrames()
 			queueLock.Store(false);
 		}
 		frame++;
-		iTime += 1.0 / FPS;
+		iTime += 1.0 / params.targetFPS;
 	}
 	kernels.ClearKernels();
 	exit.Store(true);

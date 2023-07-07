@@ -1,12 +1,65 @@
 #include <iostream>
 #include <thread>
 #include <filesystem>
+#include <sstream>
 
 #include "RenderThread.hpp"
 #include "EncoderThread.hpp"
+#include "Maths/Maths.hpp"
+
+bool str2int(s32& i, char const* s)
+{
+	char c;
+	std::stringstream ss(s);
+	ss >> i;
+	if (ss.fail() || ss.get(c) || i <= 0)
+	{
+		return false;
+	}
+	return true;
+}
+
+void ParseArgs(int argc, char* argv[], Parameters& params)
+{
+	for (s32 i = 1; i < argc-1; ++i)
+	{
+		if (argv[i][0] != '-' && argv[i][0] != '/') continue;
+		switch (argv[i][1])
+		{
+		case 'w':
+			if (!str2int(params.targetResolution.x, argv[i+1]))
+			{
+				params.targetResolution.x = 1920;
+				std::cerr << "Invalid number " << argv[i+1] << std::endl;
+			}
+			++i;
+			break;
+		case 'h':
+			if (!str2int(params.targetResolution.y, argv[i+1]))
+			{
+				params.targetResolution.x = 1080;
+				std::cerr << "Invalid number " << argv[i + 1] << std::endl;
+			}
+			++i;
+			break;
+		case 'r':
+			if (!str2int(params.targetFPS, argv[i + 1]))
+			{
+				params.targetFPS = 30;
+				std::cerr << "Invalid number " << argv[i + 1] << std::endl;
+			}
+			++i;
+			break;
+		default:
+			break;
+		}
+	}
+}
 
 int main(int argc, char* argv[])
 {
+	Parameters params;
+	ParseArgs(argc, argv, params);
 	std::filesystem::path p = std::filesystem::current_path().append("output");
 	if (!std::filesystem::exists(p))
 	{
@@ -23,9 +76,13 @@ int main(int argc, char* argv[])
 	std::cout << "Using " << threadCount << " threads for encoding" << std::endl;
 	RenderThread th;
 	EncoderThread* threadPool = new EncoderThread[threadCount];
-	th.Init();
+	for (u32 i = 0; i < threadCount; ++i)
+	{
+		threadPool[i].Init(params);
+	}
+	th.Init(params);
 	u64 current_frame = 0;
-	u64 max_frames = static_cast<u64>(LENGTH * FPS);
+	u64 max_frames = static_cast<u64>(LENGTH * params.targetFPS);
 	while (!th.HasFinished())
 	{
 		auto frames = th.GetFrames();

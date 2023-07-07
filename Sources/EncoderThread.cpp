@@ -6,11 +6,12 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 
-#include "RenderThread.hpp"
+#ifndef _WIN32
+#include <pthread.h>
+#endif
 
 EncoderThread::EncoderThread()
 {
-	Init();
 }
 
 EncoderThread::~EncoderThread()
@@ -18,7 +19,7 @@ EncoderThread::~EncoderThread()
 	Quit();
 }
 
-void EncoderThread::Init()
+void EncoderThread::Init(const Parameters& params)
 {
 	thread = std::thread(&EncoderThread::ThreadFunc, this);
 }
@@ -67,7 +68,7 @@ void EncoderThread::ThreadFunc()
 			tmp = res.quot;
 			c++;
 		}
-		stbi_write_jpg(fileName, WIDTH, HEIGHT, 4, data.data(), 100);
+		stbi_write_jpg(fileName, params.targetResolution.x, params.targetResolution.y, 4, data.data(), 100);
 		running.Store(false);
 	}
 }
