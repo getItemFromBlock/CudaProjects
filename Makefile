@@ -11,7 +11,7 @@ CUDA_ROOT_DIR=/usr/local/cuda
 
 # CC compiler options:
 CC=g++
-CC_FLAGS=-std=c++17 -IIncludes -IHeaders
+CC_FLAGS=-std=c++17 -IIncludes -IHeaders -I$(CUDA_ROOT_DIR)/include
 CC_LIBS=
 
 ##########################################################
@@ -73,7 +73,7 @@ $(OBJ_DIR)/Main.o : $(SRC_DIR)/Main.cpp
 	$(CC) $(CC_FLAGS) -c $< -o $@
 
 # Compile C++ source files to object files:
-$(OBJ_DIR)/%.o : $(SRC_DIR)/%.cpp $(INC_DIR)/%.h
+$(OBJ_DIR)/%.o : $(SRC_DIR)/%.cpp $(INC_DIR)/%.hpp
 	$(CC) $(CC_FLAGS) -c $< -o $@
 
 # Compile CUDA source files to object files:

@@ -19,7 +19,7 @@ void CudaUtil::SelectDevice()
     for (int i = 0; i < count; ++i)
     {
         cudaDeviceProp props = { 0 };
-        cudaGetDeviceProperties_v2(&props, i);
+        cudaGetDeviceProperties(&props, i);
         names[i] = props.name;
         int score = props.maxThreadsPerBlock * props.major * 10 * props.minor;
         if (score > max)
