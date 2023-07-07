@@ -1,10 +1,10 @@
-﻿#include "kernel.hpp"
+﻿#include "Kernel.cuh"
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
 using namespace Maths;
 
-#define MAX_ITER 1024
+#define MAX_ITER 2048
 
 __device__ f64 lerp(f64 a, f64 b, f64 f)
 {
@@ -140,18 +140,17 @@ void Kernel::RunKernels(u32* img, f64 iTime)
     utils.SynchronizeDevice();
 
     utils.Copy(dev_img, img, size, CudaUtil::CopyType::DToH);
-    
-    return;
 }
 
 void Kernel::DrawText(u32* img, const std::string& text, IVec2 pos, u32 size)
 {
     for (auto c : text)
     {
-
+        // TODO
     }
 }
 
 void Kernel::SetFont(const u8* imgData, IVec2 res)
 {
+    // TODO
 }

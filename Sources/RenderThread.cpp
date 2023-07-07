@@ -4,20 +4,17 @@
 
 using namespace Maths;
 
-void RenderThread::Init(HWND hwnIn, IVec2 resIn, bool isRealTime)
+void RenderThread::Init(HWND hwnIn, IVec2 resIn)
 {
-	res = resIn;
 	hwnd = hwnIn;
-	if (isRealTime)
-	{
-		thread = std::thread(&RenderThread::ThreadFuncRealTime, this);
-	}
-	else
-	{
+	res = resIn;
+	thread = std::thread(&RenderThread::ThreadFuncRealTime, this);
+}
 
-	}
-	std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
-	start = now.time_since_epoch();
+void RenderThread::Init()
+{
+	res = Vec2(WIDTH, HEIGHT);
+	thread = std::thread(&RenderThread::ThreadFuncFrames, this);
 }
 
 void RenderThread::Resize(IVec2 newRes)
@@ -28,6 +25,20 @@ void RenderThread::Resize(IVec2 newRes)
 	}
 	storedRes = newRes;
 	resize.Store(true);
+}
+
+bool RenderThread::HasFinished() const
+{
+	return exit.Load();
+}
+
+std::vector<std::vector<u32>> RenderThread::GetFrames()
+{
+	std::vector<std::vector<u32>> result;
+	if (queueLock.Load()) return result;
+	result = queuedFrames;
+	queueLock.Store(true);
+	return result;
 }
 
 void RenderThread::Quit()
@@ -74,10 +85,17 @@ void RenderThread::HandleResize()
 	}
 }
 
-void RenderThread::ThreadFuncRealTime()
+void RenderThread::InitThread()
 {
+	std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
+	start = now.time_since_epoch();
 	kernels.InitKernels(res);
 	colorBuffer.resize(res.x * res.y);
+}
+
+void RenderThread::ThreadFuncRealTime()
+{
+	InitThread();
 	while (!exit.Load())
 	{
 		HandleResize();
@@ -90,5 +108,22 @@ void RenderThread::ThreadFuncRealTime()
 
 void RenderThread::ThreadFuncFrames()
 {
-
+	InitThread();
+	f64 iTime = 0;
+	u64 frame = 0;
+	while (iTime < LENGTH && !exit.Load())
+	{
+		kernels.RunKernels(colorBuffer.data(), iTime);
+		bufferedFrames.push_back(colorBuffer);
+		if (queueLock.Load())
+		{
+			queuedFrames = bufferedFrames;
+			bufferedFrames.clear();
+			queueLock.Store(false);
+		}
+		frame++;
+		iTime += 1.0 / FPS;
+	}
+	kernels.ClearKernels();
+	exit.Store(true);
 }

@@ -2,8 +2,8 @@
 
 #include <cstdio>
 
-// Since we are using Vulkan, we need to invert the projection matrixes
-#define INVERTED_PROJECTION
+// TODO enable this if using Vulkan, or any other API that invert some axis
+// #define INVERTED_PROJECTION
 
 namespace Maths
 {
