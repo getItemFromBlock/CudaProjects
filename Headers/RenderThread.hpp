@@ -1,6 +1,11 @@
 #pragma once
 
+#ifdef _WIN32
 #include <Windows.h>
+#else
+#define HWND void*
+#endif
+
 #include <thread>
 #include <vector>
 #include <chrono>
