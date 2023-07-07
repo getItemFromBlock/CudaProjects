@@ -11,7 +11,7 @@ CUDA_ROOT_DIR=/usr/local/cuda
 
 # CC compiler options:
 CC=g++
-CC_FLAGS=-std=c++11 
+CC_FLAGS=-std=c++17
 CC_LIBS=
 
 ##########################################################
