@@ -273,10 +273,10 @@ namespace Maths
     Mat4 Mat4::CreateViewMatrix(const Vec3& position, const Vec3& focus, const Vec3& up)
     {
         Mat4 temp;
-        Vec3 z = (position - focus).UnitVector();
-        Vec3 x = up.CrossProduct(z).UnitVector();
-        Vec3 y = z.CrossProduct(x);
-        Vec3 delta = Vec3(-x.DotProduct(position), -y.DotProduct(position), -z.DotProduct(position));
+        Vec3 z = (position - focus).Normalize();
+        Vec3 x = up.Cross(z).Normalize();
+        Vec3 y = z.Cross(x);
+        Vec3 delta = Vec3(-x.Dot(position), -y.Dot(position), -z.Dot(position));
         for (int i = 0; i < 3; i++)
         {
             temp.at(i, 0) = x[i];
@@ -294,7 +294,7 @@ namespace Maths
         Mat4 inverse = projMatrix.CreateInverseMatrix();
         Vec4 qs = Vec4(-copysignf(1.0f, c.x), copysignf(1.0f, c.y), -1.0f, 1.0f);
         Vec4 q = inverse * qs;
-        Vec4 vec = c * ((-2.0f * q.z) / c.DotProduct(q));
+        Vec4 vec = c * ((-2.0f * q.z) / c.Dot(q));
         vec.z = vec.z - 1;
         for (u8 i = 0; i < 4; i++)
         {
@@ -678,6 +678,18 @@ namespace Maths
         printf("\n");
     }
 
+    const std::string Mat3::toString() const
+    {
+        std::string res = "( ";
+        for (s32 i = 0; i < 9; i++)
+        {
+            res += std::to_string(content[(i * 3) % 9 + i / 3]);
+            if (i != 8) res.append(", ");
+        }
+        res.append(")");
+        return res;
+    }
+
     Mat3 Mat3::Identity()
     {
         return Mat3(1);
@@ -866,7 +878,7 @@ namespace Maths
         Vec3 x = Vec3(content[0], content[1], content[2]);
         Vec3 y = Vec3(content[4], content[5], content[6]);
         Vec3 z = Vec3(content[8], content[9], content[10]);
-        return Vec3(x.GetLength(), y.GetLength(), z.GetLength());
+        return Vec3(x.Length(), y.Length(), z.Length());
     }
 
     void Maths::Util::GenerateSphere(s32 x, s32 y, std::vector<Vec3>* PosOut, std::vector<Vec3>* NormOut, std::vector<Vec2>* UVOut)
@@ -1072,22 +1084,22 @@ namespace Maths
         {
             Vec3 axis;
             axis[i] = 1;
-            newExtent[i] = std::abs(axis.DotProduct(right)) +
-                std::abs(axis.DotProduct(up)) +
-                std::abs(axis.DotProduct(forward));
+            newExtent[i] = std::abs(axis.Dot(right)) +
+                std::abs(axis.Dot(up)) +
+                std::abs(axis.Dot(forward));
         }
         /*
-        f32 newIi = std::abs(Vec3(1, 0, 0).DotProduct(right)) +
-            std::abs(Vec3(1, 0, 0).DotProduct(up)) +
-            std::abs(Vec3(1, 0, 0).DotProduct(forward));
+        f32 newIi = std::abs(Vec3(1, 0, 0).Dot(right)) +
+            std::abs(Vec3(1, 0, 0).Dot(up)) +
+            std::abs(Vec3(1, 0, 0).Dot(forward));
 
-        f32 newIj = std::abs(Vec3(0, 1, 0).DotProduct(right)) +
-            std::abs(Vec3(0, 1, 0).DotProduct(up)) +
-            std::abs(Vec3(0, 1, 0).DotProduct(forward));
+        f32 newIj = std::abs(Vec3(0, 1, 0).Dot(right)) +
+            std::abs(Vec3(0, 1, 0).Dot(up)) +
+            std::abs(Vec3(0, 1, 0).Dot(forward));
 
-        f32 newIk = std::abs(Vec3(0, 0, 1).DotProduct(right)) +
-            std::abs(Vec3(0, 0, 1).DotProduct(up)) +
-            std::abs(Vec3(0, 0, 1).DotProduct(forward));
+        f32 newIk = std::abs(Vec3(0, 0, 1).Dot(right)) +
+            std::abs(Vec3(0, 0, 1).Dot(up)) +
+            std::abs(Vec3(0, 0, 1).Dot(forward));
             */
         const AABB globalAABB(globalCenter, newExtent);
 

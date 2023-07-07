@@ -2,27 +2,31 @@
 
 #include <assert.h>
 
-#include "Kernel.hpp"
+using namespace Maths;
 
-void RenderThread::Init(HWND hwnIn, u32 w, u32 h)
+void RenderThread::Init(HWND hwnIn, IVec2 resIn, bool isRealTime)
 {
-	width = w;
-	height = h;
+	res = resIn;
 	hwnd = hwnIn;
-	kernels.InitKernels(w, h);
-	thread = std::thread(&RenderThread::ThreadFunc, this);
+	if (isRealTime)
+	{
+		thread = std::thread(&RenderThread::ThreadFuncRealTime, this);
+	}
+	else
+	{
+
+	}
 	std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
 	start = now.time_since_epoch();
 }
 
-void RenderThread::Resize(u32 newWidth, u32 newHeight)
+void RenderThread::Resize(IVec2 newRes)
 {
 	while (resize.Load())
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
-	storedWidth = newWidth;
-	storedHeight = newHeight;
+	storedRes = newRes;
 	resize.Store(true);
 }
 
@@ -37,13 +41,13 @@ void RenderThread::CopyToScreen()
 	HDC hdc = GetDC(hwnd);
 	BITMAPINFO info = { 0 };
 	info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-	info.bmiHeader.biWidth = width;
-	info.bmiHeader.biHeight = -(s32)(height); // top-down image 
+	info.bmiHeader.biWidth = res.x;
+	info.bmiHeader.biHeight = -res.y; // top-down image 
 	info.bmiHeader.biPlanes = 1;
 	info.bmiHeader.biBitCount = 32;
 	info.bmiHeader.biCompression = BI_RGB;
-	info.bmiHeader.biSizeImage = width * height * sizeof(u32);
-	int t = SetDIBitsToDevice(hdc, 0, 0, width, height, 0, 0, 0, height, colorBuffer.data(), &info, DIB_RGB_COLORS);
+	info.bmiHeader.biSizeImage = res.x * res.y * sizeof(u32);
+	int t = SetDIBitsToDevice(hdc, 0, 0, res.x, res.y, 0, 0, 0, res.y, colorBuffer.data(), &info, DIB_RGB_COLORS);
 	ReleaseDC(hwnd, hdc);
 }
 
@@ -53,27 +57,27 @@ void RenderThread::RunKernels()
 	auto duration = now.time_since_epoch() - start;
 	auto micros = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
 	f64 iTime = micros / 1000000.0;
-	kernels.RunKernels(colorBuffer.data(), storedWidth, storedHeight, iTime);
+	kernels.RunKernels(colorBuffer.data(), iTime);
 }
 
 void RenderThread::HandleResize()
 {
 	if (resize.Load())
 	{
-		if (colorBuffer.size() < 1llu * storedHeight * storedWidth)
+		if (colorBuffer.size() < 1llu * storedRes.x * storedRes.y)
 		{
-			colorBuffer.resize(storedHeight * storedWidth);
+			colorBuffer.resize(storedRes.x * storedRes.y);
 		}
-		width = storedWidth;
-		height = storedHeight;
-		kernels.Resize(width, height);
+		res = storedRes;
+		kernels.Resize(res);
 		resize.Store(false);
 	}
 }
 
-void RenderThread::ThreadFunc()
+void RenderThread::ThreadFuncRealTime()
 {
-	colorBuffer.resize(width*height);
+	kernels.InitKernels(res);
+	colorBuffer.resize(res.x * res.y);
 	while (!exit.Load())
 	{
 		HandleResize();
@@ -82,4 +86,9 @@ void RenderThread::ThreadFunc()
 		//std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 	kernels.ClearKernels();
+}
+
+void RenderThread::ThreadFuncFrames()
+{
+
 }

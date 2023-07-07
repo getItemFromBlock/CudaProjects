@@ -4,27 +4,29 @@
 #include <vector>
 #include <string>
 
-// Uncomment to enable implicit ImGui Vector conversions
-//#include <imgui.h>
-
 #ifdef JOLT_API
-    #include <Jolt/Jolt.h>
+#include <Jolt/Jolt.h>
 
-    #include <Jolt/Math/Vec3.h>
-    #include <Jolt/Math/Float3.h>
-    #include <Jolt/Math/Float2.h>
-    #include <Jolt/Math/Mat44.h>
-    #include <Jolt/Core/Color.h>
-#endif //JOLT_API
+#include <Jolt/Math/Vec3.h>
+#include <Jolt/Math/Float3.h>
+#include <Jolt/Math/Float2.h>
+#include <Jolt/Math/Mat44.h>
+#include <Jolt/Core/Color.h>
+#endif
 
-#include "Core/Types.hpp"
-
+#include "Types.hpp"
 
 #ifdef NAT_EngineDLL
-    #define NAT_API __declspec(dllexport)
+#define NAT_API __declspec(dllexport)
 #else
-    #define NAT_API __declspec(dllimport)
-#endif // NAT_EngineDLL
+#define NAT_API
+#endif
+
+#ifdef __CUDACC__
+#define CUDA_FUNCTION __host__ __device__
+#else
+#define CUDA_FUNCTION
+#endif
 
 namespace Maths
 {
@@ -39,55 +41,56 @@ namespace Maths
     {
     public:
         s32 x, y;
-        inline IVec2() : x(0), y(0) {}
-        inline IVec2(const IVec2& in) : x(in.x), y(in.y) {}
-        inline IVec2(const Vec2 in);
-        inline IVec2(const s32 a, const s32 b) : x(a), y(b) {}
+        CUDA_FUNCTION inline IVec2() : x(0), y(0) {}
+        CUDA_FUNCTION inline IVec2(const IVec2& in) : x(in.x), y(in.y) {}
+        CUDA_FUNCTION inline IVec2(const Vec2 in);
+        CUDA_FUNCTION inline IVec2(const s32 a, const s32 b) : x(a), y(b) {}
 		
 		void print() const;
         const std::string toString() const;
 
+        CUDA_FUNCTION inline s32 Dot(IVec2 a) const;
         // Return the length squared of this object
-        inline f32 LengthSquared() const;
+        CUDA_FUNCTION inline s32 Dot() const;
 
         // Return the lenght of the given Vector
-        inline f32 GetLength() const;
+        CUDA_FUNCTION inline f32 Length() const;
 
-        inline IVec2 operator+(const IVec2 a) const;
+        CUDA_FUNCTION inline IVec2 operator+(const IVec2 a) const;
 
-        inline IVec2 operator+(const s32 a) const;
+        CUDA_FUNCTION inline IVec2 operator+(const s32 a) const;
 
-        inline IVec2& operator+=(const IVec2 a);
+        CUDA_FUNCTION inline IVec2& operator+=(const IVec2 a);
 
-        inline IVec2& operator+=(const s32 a);
+        CUDA_FUNCTION inline IVec2& operator+=(const s32 a);
 
         // Return a new vector wich is the substraction of 'a' and 'b'
-        inline IVec2 operator-(const IVec2 a) const;
+        CUDA_FUNCTION inline IVec2 operator-(const IVec2 a) const;
 
-        inline IVec2 operator-(const s32 a) const;
+        CUDA_FUNCTION inline IVec2 operator-(const s32 a) const;
 
-        inline IVec2& operator-=(const IVec2 a);
+        CUDA_FUNCTION inline IVec2& operator-=(const IVec2 a);
 
-        inline IVec2& operator-=(const s32 a);
+        CUDA_FUNCTION inline IVec2& operator-=(const s32 a);
 		
-		inline IVec2 operator-() const;
+		CUDA_FUNCTION inline IVec2 operator-() const;
 
         // Return the result of the aritmetic multiplication of 'a' and 'b'
-        inline IVec2 operator*(const IVec2 a) const;
+        CUDA_FUNCTION inline IVec2 operator*(const IVec2 a) const;
 
-        inline IVec2& operator*=(const IVec2 a);
+        CUDA_FUNCTION inline IVec2& operator*=(const IVec2 a);
 
-        inline IVec2 operator*(const f32 a) const;
+        CUDA_FUNCTION inline IVec2 operator*(const f32 a) const;
 
-        inline IVec2& operator*=(const s32 a);
+        CUDA_FUNCTION inline IVec2& operator*=(const s32 a);
 
-        inline IVec2 operator/(const f32 b) const;
+        CUDA_FUNCTION inline IVec2 operator/(const f32 b) const;
 
-        inline IVec2& operator/=(const s32 b);
+        CUDA_FUNCTION inline IVec2& operator/=(const s32 b);
 
-        inline bool operator==(const IVec2 b) const;
+        CUDA_FUNCTION inline bool operator==(const IVec2 b) const;
 
-        inline bool operator!=(const IVec2 b) const;
+        CUDA_FUNCTION inline bool operator!=(const IVec2 b) const;
     };
 
     class NAT_API Vec2
@@ -97,85 +100,84 @@ namespace Maths
         f32 y;
 
         // Return a new empty Vec2
-        inline Vec2() : x(0), y(0) {}
+        CUDA_FUNCTION inline Vec2() : x(0), y(0) {}
 
         // Return a new Vec2 initialised with 'a' and 'b'
-        inline Vec2(f32 a, f32 b) : x(a), y(b) {}
+        CUDA_FUNCTION inline Vec2(f32 a, f32 b) : x(a), y(b) {}
 
-        inline Vec2(f32 value) : Vec2(value,value) {}
+        CUDA_FUNCTION inline Vec2(f32 value) : Vec2(value,value) {}
 
         // Return a new Vec2 initialised with 'in'
-        inline Vec2(const Vec2& in) : x(in.x), y(in.y) {}
-        inline Vec2(const IVec2 in) : x((f32)in.x), y((f32)in.y) {}
+        CUDA_FUNCTION inline Vec2(const Vec2& in) : x(in.x), y(in.y) {}
+        CUDA_FUNCTION inline Vec2(const IVec2 in) : x((f32)in.x), y((f32)in.y) {}
 		
 		void print() const;
         const std::string toString() const;
 
-        // Return the length squared of this object
-        inline f32 LengthSquared() const;
-
         // Return a new Vec2 equivalent to Vec(1,0) rotated by 'angle' (in radians)
-        inline static Vec2 FromAngle(float angle);
+        CUDA_FUNCTION inline static Vec2 FromAngle(float angle);
 
         //Return the distance between this object and 'a'
-        inline f32 GetDistanceFromPoint(Vec2 a) const;
+        CUDA_FUNCTION inline f32 GetDistanceFromPoint(Vec2 a) const;
 
         // Return the lenght of the given Vector
-        inline f32 GetLength() const;
+        CUDA_FUNCTION inline f32 Length() const;
 
-        inline Vec2 operator+(const Vec2 a) const;
-        inline Vec2& operator+=(const Vec2 a);
-        inline Vec2 operator+(const f32 a) const;
-        inline Vec2& operator+=(const f32 a);
+        CUDA_FUNCTION inline Vec2 operator+(const Vec2 a) const;
+        CUDA_FUNCTION inline Vec2& operator+=(const Vec2 a);
+        CUDA_FUNCTION inline Vec2 operator+(const f32 a) const;
+        CUDA_FUNCTION inline Vec2& operator+=(const f32 a);
 
-        inline Vec2 operator-(const Vec2 a) const;
-        inline Vec2& operator-=(const Vec2 a);
-        inline Vec2 operator-(const f32 a) const;
-        inline Vec2& operator-=(const f32 a);
+        CUDA_FUNCTION inline Vec2 operator-(const Vec2 a) const;
+        CUDA_FUNCTION inline Vec2& operator-=(const Vec2 a);
+        CUDA_FUNCTION inline Vec2 operator-(const f32 a) const;
+        CUDA_FUNCTION inline Vec2& operator-=(const f32 a);
 
-        inline Vec2 operator-() const;
+        CUDA_FUNCTION inline Vec2 operator-() const;
 
-        inline Vec2 operator*(const Vec2 a) const;
-        inline Vec2& operator*=(const Vec2 a);
-        inline Vec2 operator*(const f32 a) const;
-        inline Vec2& operator*=(const f32 a);
+        CUDA_FUNCTION inline Vec2 operator*(const Vec2 a) const;
+        CUDA_FUNCTION inline Vec2& operator*=(const Vec2 a);
+        CUDA_FUNCTION inline Vec2 operator*(const f32 a) const;
+        CUDA_FUNCTION inline Vec2& operator*=(const f32 a);
 
-        inline Vec2 operator/(const f32 b) const;
-        inline Vec2 operator/(const Vec2 b) const;
-        inline Vec2& operator/=(const f32 b);
-        inline Vec2& operator/=(const Vec2 b);
+        CUDA_FUNCTION inline Vec2 operator/(const f32 b) const;
+        CUDA_FUNCTION inline Vec2 operator/(const Vec2 b) const;
+        CUDA_FUNCTION inline Vec2& operator/=(const f32 b);
+        CUDA_FUNCTION inline Vec2& operator/=(const Vec2 b);
 
-        inline bool operator==(const Vec2 b) const;
-        inline bool operator!=(const Vec2 b) const;
+        CUDA_FUNCTION inline bool operator==(const Vec2 b) const;
+        CUDA_FUNCTION inline bool operator!=(const Vec2 b) const;
 
-        inline const f32& operator[](const size_t a) const;
+        CUDA_FUNCTION inline const f32& operator[](const size_t a) const;
 
-        inline f32& operator[](const size_t a);
+        CUDA_FUNCTION inline f32& operator[](const size_t a);
 
         // Return true if 'a' and 'b' are collinears (Precision defined by VEC_COLLINEAR_PRECISION)
-        inline bool IsCollinearWith(Vec2 a) const;
+        CUDA_FUNCTION inline bool IsCollinearWith(Vec2 a) const;
 
-        inline f32 DotProduct(Vec2 a) const;
+        CUDA_FUNCTION inline f32 Dot(Vec2 a) const;
+        // Return the length squared of this object
+        CUDA_FUNCTION inline f32 Dot() const;
 
         // Return the z component of the cross product of 'a' and 'b'
-        inline f32 CrossProduct(Vec2 a) const;
+        CUDA_FUNCTION inline f32 Cross(Vec2 a) const;
 
         // Return a vector with the same direction that 'in', but with length 1
-        inline Vec2 UnitVector() const;
+        CUDA_FUNCTION inline Vec2 Normalize() const;
 
         // Return a vector of length 'in' and with an opposite direction
-        inline Vec2 Negate() const;
+        CUDA_FUNCTION inline Vec2 Negate() const;
 
         // Return the normal vector of 'in'
-        inline Vec2 GetNormal() const;
+        CUDA_FUNCTION inline Vec2 GetNormal() const;
 
         // return true if 'a' converted to s32 is equivalent to 'in' converted to s32
-        inline bool IsIntEquivalent(Vec2 a) const;
+        CUDA_FUNCTION inline bool IsIntEquivalent(Vec2 a) const;
 
         // Get the angle defined by this vector, in radians
-        inline f32 GetAngle() const;
+        CUDA_FUNCTION inline f32 GetAngle() const;
 		
-		inline bool IsNearlyEqual(Vec2 a, f32 prec = 1e-5f);
+		CUDA_FUNCTION inline bool IsNearlyEqual(Vec2 a, f32 prec = 1e-5f);
 
 #ifdef IMGUI_API
         inline Vec2(const ImVec2& in) : x(in.x), y(in.y) {}
@@ -201,40 +203,47 @@ namespace Maths
     {
     public:
         s32 x, y, z;
-        inline IVec3() : x(0), y(0), z(0) {}
-        inline IVec3(const IVec3& in) : x(in.x), y(in.y), z(in.z) {}
-        inline IVec3(const Vec3& in);
-        inline IVec3(const s32& a, const s32& b, const s32& c) : x(a), y(b), z(c) {}
+        CUDA_FUNCTION inline IVec3() : x(0), y(0), z(0) {}
+        CUDA_FUNCTION inline IVec3(const IVec3& in) : x(in.x), y(in.y), z(in.z) {}
+        CUDA_FUNCTION inline IVec3(const Vec3& in);
+        CUDA_FUNCTION inline IVec3(const s32& a, const s32& b, const s32& c) : x(a), y(b), z(c) {}
 
         void print() const;
         const std::string toString() const;
 
-        inline IVec3 operator+(const IVec3& a) const;
-        inline IVec3 operator+(const s32 a) const;
-        inline IVec3& operator+=(const IVec3& a);
-        inline IVec3& operator+=(const s32 a);
+        CUDA_FUNCTION inline s32 Dot(IVec3 a) const;
+        // Return the length squared of this object
+        CUDA_FUNCTION inline s32 Dot() const;
 
-        inline IVec3 operator-(const IVec3& a) const;
-        inline IVec3 operator-(const s32 a) const;
-        inline IVec3& operator-=(const IVec3& a);
-        inline IVec3& operator-=(const s32 a);
+        // Return the lenght of the given Vector
+        CUDA_FUNCTION inline f32 Length() const;
 
-        inline IVec3 operator*(const IVec3& a) const;
-        inline IVec3 operator*(const f32 a) const;
-        inline IVec3& operator*=(const IVec3& a);
-        inline IVec3& operator*=(const s32 a);
+        CUDA_FUNCTION inline IVec3 operator+(const IVec3& a) const;
+        CUDA_FUNCTION inline IVec3 operator+(const s32 a) const;
+        CUDA_FUNCTION inline IVec3& operator+=(const IVec3& a);
+        CUDA_FUNCTION inline IVec3& operator+=(const s32 a);
 
-        inline IVec3 operator/(const IVec3& a) const;
-        inline IVec3 operator/(const f32 b) const;
-        inline IVec3& operator/=(const IVec3& a);
-        inline IVec3& operator/=(const s32 a);
+        CUDA_FUNCTION inline IVec3 operator-(const IVec3& a) const;
+        CUDA_FUNCTION inline IVec3 operator-(const s32 a) const;
+        CUDA_FUNCTION inline IVec3& operator-=(const IVec3& a);
+        CUDA_FUNCTION inline IVec3& operator-=(const s32 a);
 
-        inline bool operator==(const IVec3& b) const;
-        inline bool operator!=(const IVec3& b) const;
+        CUDA_FUNCTION inline IVec3 operator*(const IVec3& a) const;
+        CUDA_FUNCTION inline IVec3 operator*(const f32 a) const;
+        CUDA_FUNCTION inline IVec3& operator*=(const IVec3& a);
+        CUDA_FUNCTION inline IVec3& operator*=(const s32 a);
+
+        CUDA_FUNCTION inline IVec3 operator/(const IVec3& a) const;
+        CUDA_FUNCTION inline IVec3 operator/(const f32 b) const;
+        CUDA_FUNCTION inline IVec3& operator/=(const IVec3& a);
+        CUDA_FUNCTION inline IVec3& operator/=(const s32 a);
+
+        CUDA_FUNCTION inline bool operator==(const IVec3& b) const;
+        CUDA_FUNCTION inline bool operator!=(const IVec3& b) const;
 		
-		inline const s32& operator[](const size_t a) const;
+		CUDA_FUNCTION inline const s32& operator[](const size_t a) const;
 
-        inline s32& operator[](const size_t a);
+        CUDA_FUNCTION inline s32& operator[](const size_t a);
     };
 
     class NAT_API Vec3
@@ -244,74 +253,74 @@ namespace Maths
         f32 y;
         f32 z;
 
-        inline Vec3() : x(0), y(0), z(0) {}
+        CUDA_FUNCTION inline Vec3() : x(0), y(0), z(0) {}
 
-        inline Vec3(f32 content) : x(content), y(content), z(content) {}
+        CUDA_FUNCTION inline Vec3(f32 content) : x(content), y(content), z(content) {}
 
-        inline Vec3(f32 a, f32 b, f32 c) : x(a), y(b), z(c) {}
+        CUDA_FUNCTION inline Vec3(f32 a, f32 b, f32 c) : x(a), y(b), z(c) {}
 
         // Return a new Vec3 initialised with 'in'
-        inline Vec3(const Vec3& in) : x(in.x), y(in.y), z(in.z) {}
+        CUDA_FUNCTION inline Vec3(const Vec3& in) : x(in.x), y(in.y), z(in.z) {}
 
-        inline Vec3(const IVec3& in) : x((f32)in.x), y((f32)in.y), z((f32)in.z) {}
+        CUDA_FUNCTION inline Vec3(const IVec3& in) : x((f32)in.x), y((f32)in.y), z((f32)in.z) {}
 
         void Print() const;
 		const std::string ToString() const;
 
-        inline f32 LengthSquared() const;
+        CUDA_FUNCTION inline f32 Dot() const;
 
-        inline f32 GetLength() const;
+        CUDA_FUNCTION inline f32 Length() const;
 
-        inline Vec3 operator+(const Vec3& a) const;
-        inline Vec3 operator+(const f32 a) const;
-        inline Vec3& operator+=(const Vec3& a);
-        inline Vec3& operator+=(const f32 a);
+        CUDA_FUNCTION inline Vec3 operator+(const Vec3& a) const;
+        CUDA_FUNCTION inline Vec3 operator+(const f32 a) const;
+        CUDA_FUNCTION inline Vec3& operator+=(const Vec3& a);
+        CUDA_FUNCTION inline Vec3& operator+=(const f32 a);
 
-        inline Vec3 operator-(const Vec3& a) const;
-        inline Vec3 operator-(const f32 a) const;
-        inline Vec3& operator-=(const Vec3& a);
-        inline Vec3& operator-=(const f32 a);
+        CUDA_FUNCTION inline Vec3 operator-(const Vec3& a) const;
+        CUDA_FUNCTION inline Vec3 operator-(const f32 a) const;
+        CUDA_FUNCTION inline Vec3& operator-=(const Vec3& a);
+        CUDA_FUNCTION inline Vec3& operator-=(const f32 a);
 
-        inline Vec3 operator-() const;
+        CUDA_FUNCTION inline Vec3 operator-() const;
 
-        inline Vec3 operator*(const Vec3& a) const;
-        inline Vec3 operator*(const f32 a) const;
-        inline Vec3& operator*=(const Vec3& a);
-        inline Vec3& operator*=(const f32 a);
+        CUDA_FUNCTION inline Vec3 operator*(const Vec3& a) const;
+        CUDA_FUNCTION inline Vec3 operator*(const f32 a) const;
+        CUDA_FUNCTION inline Vec3& operator*=(const Vec3& a);
+        CUDA_FUNCTION inline Vec3& operator*=(const f32 a);
 
-        inline Vec3 operator/(const Vec3& b) const;
-        inline Vec3 operator/(const f32 a) const;
-        inline Vec3& operator/=(const Vec3& a);
-        inline Vec3& operator/=(const f32 a);
+        CUDA_FUNCTION inline Vec3 operator/(const Vec3& b) const;
+        CUDA_FUNCTION inline Vec3 operator/(const f32 a) const;
+        CUDA_FUNCTION inline Vec3& operator/=(const Vec3& a);
+        CUDA_FUNCTION inline Vec3& operator/=(const f32 a);
 
-        inline bool operator==(const Vec3& b) const;
-        inline bool operator!=(const Vec3& b) const;
+        CUDA_FUNCTION inline bool operator==(const Vec3& b) const;
+        CUDA_FUNCTION inline bool operator!=(const Vec3& b) const;
 
-        inline const f32& operator[](const size_t a) const;
+        CUDA_FUNCTION inline const f32& operator[](const size_t a) const;
 
-        inline f32& operator[](const size_t a);
+        CUDA_FUNCTION inline f32& operator[](const size_t a);
 
-        inline Vec3 Reflect(const Vec3& normal);
+        CUDA_FUNCTION inline Vec3 Reflect(const Vec3& normal);
 
         // Return tue if 'a' and 'b' are collinears (Precision defined by VEC_COLLINEAR_PRECISION)
-        inline bool IsCollinearWith(Vec3 a) const;
+        CUDA_FUNCTION inline bool IsCollinearWith(Vec3 a) const;
 
         // Return the dot product of 'a' and 'b'
-        inline f32 DotProduct(Vec3 a) const;
+        CUDA_FUNCTION inline f32 Dot(Vec3 a) const;
 
         // Return the z component of the cross product of 'a' and 'b'
-        inline Vec3 CrossProduct(Vec3 a) const;
+        CUDA_FUNCTION inline Vec3 Cross(Vec3 a) const;
 
         // Return a vector with the same direction that 'in', but with length 1
-        inline Vec3 UnitVector() const;
+        CUDA_FUNCTION inline Vec3 Normalize() const;
 
         // Return a vector of length 'in' and with an opposite direction
-        inline Vec3 Negate() const;
+        CUDA_FUNCTION inline Vec3 Negate() const;
 
         // return true if 'a' converted to s32 is equivalent to 'in' converted to s32
-        inline bool IsIntEquivalent(Vec3 a) const;
+        CUDA_FUNCTION inline bool IsIntEquivalent(Vec3 a) const;
 
-        inline bool IsNearlyEqual(Vec3 a, f32 prec = 1e-5f);
+        CUDA_FUNCTION inline bool IsNearlyEqual(Vec3 a, f32 prec = 1e-5f);
 #ifdef JOLT_API
         inline Vec3(const JPH::Vec3Arg& in) : x(in.GetX()), y(in.GetY()), z(in.GetZ()) {}
 
@@ -331,7 +340,6 @@ namespace Maths
 #endif
     };
 
-
     class Vec4;
 
     class NAT_API Color4
@@ -342,14 +350,14 @@ namespace Maths
         u8 b;
         u8 a;
 
-        inline Color4() : r(0), g(0), b(0), a(0) {}
-        inline Color4(const f32* in);
-        inline Color4(const Vec4& in);
-        inline Color4(u8 red, u8 green, u8 blue, u8 alpha = 0xff) : r(red), g(green), b(blue), a(alpha) {}
-        inline Color4(u32 rgba) : r((rgba & 0xff000000) >> 24), g((rgba & 0x00ff0000) >> 16), b((rgba & 0x0000ff00) >> 8), a(rgba & 0x000000ff) {}
+        CUDA_FUNCTION inline Color4() : r(0), g(0), b(0), a(0) {}
+        CUDA_FUNCTION inline Color4(const f32* in);
+        CUDA_FUNCTION inline Color4(const Vec4& in);
+        CUDA_FUNCTION inline Color4(u8 red, u8 green, u8 blue, u8 alpha = 0xff) : r(red), g(green), b(blue), a(alpha) {}
+        CUDA_FUNCTION inline Color4(u32 rgba) : r((rgba & 0xff000000) >> 24), g((rgba & 0x00ff0000) >> 16), b((rgba & 0x0000ff00) >> 8), a(rgba & 0x000000ff) {}
 
-        inline Color4 operator*(const  f32 a) const;
-        inline Color4 operator+(const Color4& a) const;
+        CUDA_FUNCTION inline Color4 operator*(const f32 a) const;
+        CUDA_FUNCTION inline Color4 operator+(const Color4& a) const;
     };
 
     class NAT_API Vec4
@@ -361,18 +369,18 @@ namespace Maths
         f32 w;
 
         // Return a new empty Vec4
-        inline Vec4() : x(0), y(0), z(0), w(0) {}
+        CUDA_FUNCTION inline Vec4() : x(0), y(0), z(0), w(0) {}
 
         // Return a new Vec4 initialised with 'a', 'b', 'c' and 'd'
-        inline Vec4(f32 a, f32 b, f32 c, f32 d = 1) : x(a), y(b), z(c), w(d) {}
+        CUDA_FUNCTION inline Vec4(f32 a, f32 b, f32 c, f32 d = 1) : x(a), y(b), z(c), w(d) {}
 
         // Return a new Vec4 initialised with 'in'
-        inline Vec4(const Vec3& in, f32 wIn = 1.0f) : x(in.x), y(in.y), z(in.z), w(wIn) {}
+        CUDA_FUNCTION inline Vec4(const Vec3& in, f32 wIn = 1.0f) : x(in.x), y(in.y), z(in.z), w(wIn) {}
 
         // Return a new Vec4 initialised with 'in'
-        inline Vec4(const Vec4& in) : x(in.x), y(in.y), z(in.z), w(in.w) {}
+        CUDA_FUNCTION inline Vec4(const Vec4& in) : x(in.x), y(in.y), z(in.z), w(in.w) {}
 
-        inline Vec4(const Color4& in) : x(in.r / 255.0f), y(in.g / 255.0f), z(in.b / 255.0f), w(in.a / 255.0f) {}
+        CUDA_FUNCTION inline Vec4(const Color4& in) : x(in.r / 255.0f), y(in.g / 255.0f), z(in.b / 255.0f), w(in.a / 255.0f) {}
 
 
         // Print the Vec4
@@ -380,67 +388,67 @@ namespace Maths
 		const std::string toString() const;
 
         // Return the Vec3 of Vec4
-        inline Vec3 GetVector() const;
+        CUDA_FUNCTION inline Vec3 GetVector() const;
 
         // Return the length squared
-        inline f32 LengthSquared() const;
+        CUDA_FUNCTION inline f32 Dot() const;
 
         // Return the length
-        inline f32 GetLength() const;
+        CUDA_FUNCTION inline f32 Length() const;
 
         // Divide each components by w, or set to VEC_HIGH_VALUE if w equals 0
-        inline Vec4 Homogenize() const;
+        CUDA_FUNCTION inline Vec4 Homogenize() const;
 
-        inline Vec4 operator+(const Vec4& a) const;
-        inline Vec4 operator+(const f32 a) const;
-        inline Vec4& operator+=(const Vec4& a);
-        inline Vec4& operator+=(const f32 a);
+        CUDA_FUNCTION inline Vec4 operator+(const Vec4& a) const;
+        CUDA_FUNCTION inline Vec4 operator+(const f32 a) const;
+        CUDA_FUNCTION inline Vec4& operator+=(const Vec4& a);
+        CUDA_FUNCTION inline Vec4& operator+=(const f32 a);
 
-        inline Vec4 operator-(const Vec4& a) const;
-        inline Vec4 operator-(const f32 a) const;
-        inline Vec4& operator-=(const Vec4& a);
-        inline Vec4& operator-=(const f32 a);
+        CUDA_FUNCTION inline Vec4 operator-(const Vec4& a) const;
+        CUDA_FUNCTION inline Vec4 operator-(const f32 a) const;
+        CUDA_FUNCTION inline Vec4& operator-=(const Vec4& a);
+        CUDA_FUNCTION inline Vec4& operator-=(const f32 a);
 
-        inline Vec4 operator-() const;
+        CUDA_FUNCTION inline Vec4 operator-() const;
 
-        inline Vec4 operator*(const Vec4& a) const;
-        inline Vec4 operator*(const f32 a) const;
-        inline Vec4& operator*=(const Vec4& a);
-        inline Vec4& operator*=(const f32 a);
+        CUDA_FUNCTION inline Vec4 operator*(const Vec4& a) const;
+        CUDA_FUNCTION inline Vec4 operator*(const f32 a) const;
+        CUDA_FUNCTION inline Vec4& operator*=(const Vec4& a);
+        CUDA_FUNCTION inline Vec4& operator*=(const f32 a);
 
-        inline Vec4 operator/(const Vec4& b) const;
-        inline Vec4 operator/(const f32 a) const;
-        inline Vec4& operator/=(const Vec4& a);
-        inline Vec4& operator/=(const f32 a);
+        CUDA_FUNCTION inline Vec4 operator/(const Vec4& b) const;
+        CUDA_FUNCTION inline Vec4 operator/(const f32 a) const;
+        CUDA_FUNCTION inline Vec4& operator/=(const Vec4& a);
+        CUDA_FUNCTION inline Vec4& operator/=(const f32 a);
 
-        inline bool operator==(const Vec4& b) const;
-        inline bool operator!=(const Vec4& b) const;
+        CUDA_FUNCTION inline bool operator==(const Vec4& b) const;
+        CUDA_FUNCTION inline bool operator!=(const Vec4& b) const;
 
-        inline f32& operator[](const size_t a);
-        inline const f32& operator[](const size_t a) const;
+        CUDA_FUNCTION inline f32& operator[](const size_t a);
+        CUDA_FUNCTION inline const f32& operator[](const size_t a) const;
 
         // Return tue if 'a' and 'b' are collinears (Precision defined by VEC_COLLINEAR_PRECISION)
-        inline bool IsCollinearWith(Vec4 a) const;
+        CUDA_FUNCTION inline bool IsCollinearWith(Vec4 a) const;
 
-        inline f32 DotProduct(Vec4 a) const;
+        CUDA_FUNCTION inline f32 Dot(Vec4 a) const;
 
         // Return the z component of the cross product of 'a' and 'b'
-        inline Vec4 CrossProduct(Vec4 a) const;
+        CUDA_FUNCTION inline Vec4 Cross(Vec4 a) const;
 
         // Return a vector with the same direction that 'in', but with length 1
-        inline Vec4 UnitVector() const;
+        CUDA_FUNCTION inline Vec4 Normalize() const;
 
         // Return a vector of length 'in' and with an opposite direction
-        inline Vec4 Negate() const;
+        CUDA_FUNCTION inline Vec4 Negate() const;
 
-        inline Vec4 Clip(const Vec4& other);
+        CUDA_FUNCTION inline Vec4 Clip(const Vec4& other);
 
         // return true if 'a' converted to s32 is equivalent to 'in' converted to s32
-        inline bool IsIntEquivalent(Vec4 a) const;
+        CUDA_FUNCTION inline bool IsIntEquivalent(Vec4 a) const;
 		
-		inline bool IsNearlyEqual(Vec4 a, f32 prec = 1e-5f);
+		CUDA_FUNCTION inline bool IsNearlyEqual(Vec4 a, f32 prec = 1e-5f);
 
-        inline f32 GetSignedDistanceToPlane(const Vec3& point) const;
+        CUDA_FUNCTION inline f32 GetSignedDistanceToPlane(const Vec3& point) const;
 
 #ifdef IMGUI_API
         inline Vec4(const ImVec4& in) : x(in.x), y(in.y), z(in.z), w(in.w) {}
@@ -472,86 +480,86 @@ namespace Maths
         */
         f32 content[16] = { 0 };
 
-        Mat4() {}
+        CUDA_FUNCTION Mat4() {}
 
-        Mat4(f32 diagonal);
+        CUDA_FUNCTION Mat4(f32 diagonal);
 
-        Mat4(const Mat4& in);
+        CUDA_FUNCTION Mat4(const Mat4& in);
 
-        Mat4(const Mat3& in);
+        CUDA_FUNCTION Mat4(const Mat3& in);
 
-        Mat4(const f32* data);
+        CUDA_FUNCTION Mat4(const f32* data);
 
-        Mat4 operator*(const Mat4& a) const;
+        CUDA_FUNCTION Mat4 operator*(const Mat4& a) const;
 
-        Vec4 operator*(const Vec4& a) const;
+        CUDA_FUNCTION Vec4 operator*(const Vec4& a) const;
 
-        static Mat4 Identity();
+        CUDA_FUNCTION  static Mat4 Identity();
 
-        static Mat4 CreateTransformMatrix(const Vec3& position, const Vec3& rotation, const Vec3& scale);
+        CUDA_FUNCTION static Mat4 CreateTransformMatrix(const Vec3& position, const Vec3& rotation, const Vec3& scale);
 
-        static Mat4 CreateTransformMatrix(const Vec3& position, const Vec3& rotation);
+        CUDA_FUNCTION static Mat4 CreateTransformMatrix(const Vec3& position, const Vec3& rotation);
 
-        static Mat4 CreateTransformMatrix(const Vec3& position, const Quat& rotation, const Vec3& scale);
+        CUDA_FUNCTION static Mat4 CreateTransformMatrix(const Vec3& position, const Quat& rotation, const Vec3& scale);
 
-        static Mat4 CreateTransformMatrix(const Vec3& position, const Quat& rotation);
+        CUDA_FUNCTION static Mat4 CreateTransformMatrix(const Vec3& position, const Quat& rotation);
 
-        static Mat4 CreateTranslationMatrix(const Vec3& translation);
+        CUDA_FUNCTION static Mat4 CreateTranslationMatrix(const Vec3& translation);
 
-        static Mat4 CreateScaleMatrix(const Vec3& scale);
+        CUDA_FUNCTION static Mat4 CreateScaleMatrix(const Vec3& scale);
 
-        static Mat4 CreateRotationMatrix(const Quat& rot);
+        CUDA_FUNCTION static Mat4 CreateRotationMatrix(const Quat& rot);
 
-        static Mat4 CreateRotationMatrix(Vec3 angles);
+        CUDA_FUNCTION static Mat4 CreateRotationMatrix(Vec3 angles);
 
-        static Mat4 CreateXRotationMatrix(f32 angle);
+        CUDA_FUNCTION static Mat4 CreateXRotationMatrix(f32 angle);
 
-        static Mat4 CreateYRotationMatrix(f32 angle);
+        CUDA_FUNCTION static Mat4 CreateYRotationMatrix(f32 angle);
 
-        static Mat4 CreateZRotationMatrix(f32 angle);
+        CUDA_FUNCTION static Mat4 CreateZRotationMatrix(f32 angle);
 
         // aspect ratio is width / height
-        static Mat4 CreatePerspectiveProjectionMatrix(f32 near, f32 far, f32 fov, f32 aspect);
+        CUDA_FUNCTION static Mat4 CreatePerspectiveProjectionMatrix(f32 near, f32 far, f32 fov, f32 aspect);
 
-        static Mat4 CreateOrthoProjectionMatrix(f32 near, f32 far, f32 fov, f32 aspect);
+        CUDA_FUNCTION static Mat4 CreateOrthoProjectionMatrix(f32 near, f32 far, f32 fov, f32 aspect);
 
-        static Mat4 CreateViewMatrix(const Vec3& position, const Vec3& focus, const Vec3& up);
+        CUDA_FUNCTION static Mat4 CreateViewMatrix(const Vec3& position, const Vec3& focus, const Vec3& up);
 
-        static Mat4 CreateObliqueProjectionMatrix(const Mat4& projMatrix, const Vec4& nearPlane);
+        CUDA_FUNCTION static Mat4 CreateObliqueProjectionMatrix(const Mat4& projMatrix, const Vec4& nearPlane);
 
-        Mat4 InverseDepth() const;
+        CUDA_FUNCTION Mat4 InverseDepth() const;
 
-        Vec3 GetPositionFromTranslation() const;
+        CUDA_FUNCTION Vec3 GetPositionFromTranslation() const;
 
-        Vec3 GetRotationFromTranslation(const Vec3& scale) const;
+        CUDA_FUNCTION Vec3 GetRotationFromTranslation(const Vec3& scale) const;
 
-        Vec3 GetRotationFromTranslation() const;
+        CUDA_FUNCTION Vec3 GetRotationFromTranslation() const;
 
-        Vec3 GetScaleFromTranslation() const;
+        CUDA_FUNCTION Vec3 GetScaleFromTranslation() const;
 
-        Mat4 TransposeMatrix();
+        CUDA_FUNCTION Mat4 TransposeMatrix();
 
-        inline f32& operator[](const size_t a);
+        CUDA_FUNCTION inline f32& operator[](const size_t a);
 		
-		inline const f32& operator[](const size_t a) const;
+		CUDA_FUNCTION inline const f32& operator[](const size_t a) const;
 
-        inline f32& at(const u8 x, const u8 y);
-        inline const f32& at(const u8 x, const u8 y) const;
+        CUDA_FUNCTION inline f32& at(const u8 x, const u8 y);
+        CUDA_FUNCTION inline const f32& at(const u8 x, const u8 y) const;
 
         void PrintMatrix(bool raw = false);
 		const std::string toString() const;
 
-        Mat4 CreateInverseMatrix() const;
+        CUDA_FUNCTION Mat4 CreateInverseMatrix() const;
 
-        Mat4 CreateAdjMatrix() const;
+        CUDA_FUNCTION Mat4 CreateAdjMatrix() const;
 
-        Mat4 GetCofactor(s32 p, s32 q, s32 n) const;
+        CUDA_FUNCTION Mat4 GetCofactor(s32 p, s32 q, s32 n) const;
 
         // Recursive function for finding determinant of matrix. n is current dimension of 'in'.
-        f32 GetDeterminant(f32 n) const;
+        CUDA_FUNCTION f32 GetDeterminant(f32 n) const;
 
 #ifdef JOLT_API
-        inline Mat4(const JPH::Mat44Arg& pMat) { pMat.StoreFloat(content); }
+        CUDA_FUNCTION inline Mat4(const JPH::Mat44Arg& pMat) { pMat.StoreFloat(content); }
 #endif // JOLT_API
 
     };
@@ -569,58 +577,59 @@ namespace Maths
         */
         f32 content[9] = { 0 };
 
-        Mat3() {}
+        CUDA_FUNCTION Mat3() {}
 
-        Mat3(f32 diagonal);
+        CUDA_FUNCTION Mat3(f32 diagonal);
 
-        Mat3(const Mat3& in);
+        CUDA_FUNCTION Mat3(const Mat3& in);
 
-        Mat3(const Mat4& in);
+        CUDA_FUNCTION Mat3(const Mat4& in);
 
-        Mat3(const f32* data);
+        CUDA_FUNCTION Mat3(const f32* data);
 
-        Mat3 operator*(const Mat3& a);
+        CUDA_FUNCTION Mat3 operator*(const Mat3& a);
 
-        Vec3 operator*(const Vec3& a);
+        CUDA_FUNCTION Vec3 operator*(const Vec3& a);
 
-        static Mat3 Identity();
+        CUDA_FUNCTION static Mat3 Identity();
 
-        static Mat3 CreateScaleMatrix(const Vec3& scale);
-
-        //Angle is in degrees
-        static Mat3 CreateXRotationMatrix(f32 angle);
+        CUDA_FUNCTION static Mat3 CreateScaleMatrix(const Vec3& scale);
 
         //Angle is in degrees
-        static Mat3 CreateYRotationMatrix(f32 angle);
+        CUDA_FUNCTION static Mat3 CreateXRotationMatrix(f32 angle);
 
         //Angle is in degrees
-        static Mat3 CreateZRotationMatrix(f32 angle);
+        CUDA_FUNCTION static Mat3 CreateYRotationMatrix(f32 angle);
+
+        //Angle is in degrees
+        CUDA_FUNCTION static Mat3 CreateZRotationMatrix(f32 angle);
 
         //Angles are in degrees
-        static Mat3 CreateRotationMatrix(Vec3 angles);
+        CUDA_FUNCTION static Mat3 CreateRotationMatrix(Vec3 angles);
 
-        Vec3 GetRotationFromTranslation(const Vec3& scale) const;
+        CUDA_FUNCTION Vec3 GetRotationFromTranslation(const Vec3& scale) const;
 
-        Vec3 GetRotationFromTranslation() const;
+        CUDA_FUNCTION Vec3 GetRotationFromTranslation() const;
 
-        Mat3 TransposeMatrix();
+        CUDA_FUNCTION Mat3 TransposeMatrix();
 
-        inline f32& operator[](const size_t a);
+        CUDA_FUNCTION inline f32& operator[](const size_t a);
 
-        inline const f32& operator[](const size_t a) const;
+        CUDA_FUNCTION inline const f32& operator[](const size_t a) const;
 
-        inline f32& at(const u8 x, const u8 y);
+        CUDA_FUNCTION inline f32& at(const u8 x, const u8 y);
 
         void PrintMatrix(bool raw = false);
+        const std::string toString() const;
 
-        Mat3 CreateInverseMatrix();
+        CUDA_FUNCTION Mat3 CreateInverseMatrix();
 
-        Mat3 CreateAdjMatrix();
+        CUDA_FUNCTION Mat3 CreateAdjMatrix();
 
-        Mat3 GetCofactor(s32 p, s32 q, s32 n);
+        CUDA_FUNCTION Mat3 GetCofactor(s32 p, s32 q, s32 n);
 
         // Recursive function for finding determinant of matrix. n is current dimension of 'in'.
-        f32 GetDeterminant(f32 n);
+        CUDA_FUNCTION f32 GetDeterminant(f32 n);
     };
     
     class NAT_API Quat
@@ -629,65 +638,66 @@ namespace Maths
         Vec3 v;
         f32 a;
 
-        inline Quat() : v(), a(1) {}
+        CUDA_FUNCTION inline Quat() : v(), a(1) {}
 
-        inline Quat(Vec3 vector, f32 real) : v(vector), a(real) {}
+        CUDA_FUNCTION inline Quat(Vec3 vector, f32 real) : v(vector), a(real) {}
 
-        inline Quat(const Mat3& in);
+        // TODO apply changes made to Quat(const Mat4& in)
+        CUDA_FUNCTION inline Quat(const Mat3& in);
 
-        inline Quat(const Mat4& in);
+        CUDA_FUNCTION inline Quat(const Mat4& in);
 
         // Return the length squared
-        inline f32 LengthSquared() const;
+        CUDA_FUNCTION inline f32 Dot() const;
 
         // Return the length
-        inline f32 GetLength() const;
+        CUDA_FUNCTION inline f32 Length() const;
 
-        inline Quat Conjugate() const;
+        CUDA_FUNCTION inline Quat Conjugate() const;
 
-        inline Quat Inverse() const;
+        CUDA_FUNCTION inline Quat Inverse() const;
 
-        inline Quat Normalize() const;
+        CUDA_FUNCTION inline Quat Normalize() const;
 
-        inline Quat NormalizeAxis() const;
+        CUDA_FUNCTION inline Quat NormalizeAxis() const;
 
         // Makes a quaternion representing a rotation in 3d space. Angle is in radians.
-        static Quat AxisAngle(Vec3 axis, f32 angle);
+        CUDA_FUNCTION static Quat AxisAngle(Vec3 axis, f32 angle);
 
         // Makes a quaternion from Euler angles (angle order is YXZ)
-        static Quat FromEuler(Vec3 euler);
+        CUDA_FUNCTION static Quat FromEuler(Vec3 euler);
 
-        inline f32 GetAngle();
+        CUDA_FUNCTION inline f32 GetAngle();
 
-        inline Vec3 GetAxis();
+        CUDA_FUNCTION inline Vec3 GetAxis();
 
-        inline Mat3 GetRotationMatrix3() const;
+        CUDA_FUNCTION inline Mat3 GetRotationMatrix3() const;
 
-        inline Mat4 GetRotationMatrix4() const;
+        CUDA_FUNCTION inline Mat4 GetRotationMatrix4() const;
 
-        inline Quat operator+(const Quat& other) const;
+        CUDA_FUNCTION inline Quat operator+(const Quat& other) const;
 
-        inline Quat operator-(const Quat& other) const;
+        CUDA_FUNCTION inline Quat operator-(const Quat& other) const;
 
-        inline Quat operator-() const;
+        CUDA_FUNCTION inline Quat operator-() const;
 
-        inline Quat operator*(const Quat& other) const;
+        CUDA_FUNCTION inline Quat operator*(const Quat& other) const;
 
-        inline Vec3 operator*(const Vec3& other) const;
+        CUDA_FUNCTION inline Vec3 operator*(const Vec3& other) const;
 
-        inline Quat operator*(const f32 scalar) const;
+        CUDA_FUNCTION inline Quat operator*(const f32 scalar) const;
 
-        inline Quat operator/(const Quat& other) const;
+        CUDA_FUNCTION inline Quat operator/(const Quat& other) const;
 
-        inline Quat operator/(const f32 scalar) const;
+        CUDA_FUNCTION inline Quat operator/(const f32 scalar) const;
 
-        inline Vec3 GetRight() const;
+        CUDA_FUNCTION inline Vec3 GetRight() const;
 
-        inline Vec3 GetUp() const;
+        CUDA_FUNCTION inline Vec3 GetUp() const;
 
-        inline Vec3 GetFront() const;
+        CUDA_FUNCTION inline Vec3 GetFront() const;
 
-        inline static Quat Slerp(const Quat& a, Quat b, f32 alpha);
+        CUDA_FUNCTION inline static Quat Slerp(const Quat& a, Quat b, f32 alpha);
 #ifdef JOLT_API
         inline Quat(const JPH::QuatArg& input) : v(input.GetX(), input.GetY(), input.GetZ()), a(input.GetW()) {}
 
@@ -698,8 +708,8 @@ namespace Maths
     class NAT_API Frustum
     {
     public:
-        Frustum() {}
-        ~Frustum() {}
+        CUDA_FUNCTION Frustum() {}
+        CUDA_FUNCTION ~Frustum() {}
 
         Vec4 top;
         Vec4 bottom;
@@ -712,63 +722,63 @@ namespace Maths
     class NAT_API AABB
     {
     public:
-        AABB() {}
-        AABB(Vec3 position, Vec3 extent) : center(position), size(extent) {}
-        ~AABB() {}
+        CUDA_FUNCTION AABB() {}
+        CUDA_FUNCTION AABB(Vec3 position, Vec3 extent) : center(position), size(extent) {}
+        CUDA_FUNCTION ~AABB() {}
         
         Vec3 center;
         Vec3 size;
 
-        bool IsOnFrustum(const Frustum& camFrustum, const Maths::Mat4& transform) const;
-        bool IsOnOrForwardPlane(const Vec4& plane) const;
+        CUDA_FUNCTION bool IsOnFrustum(const Frustum& camFrustum, const Maths::Mat4& transform) const;
+        CUDA_FUNCTION bool IsOnOrForwardPlane(const Vec4& plane) const;
     };
 
     namespace Util
     {
         // Return the given angular value in degrees converted to radians
-        inline NAT_API f32 ToRadians(f32 in);
+        CUDA_FUNCTION inline NAT_API f32 ToRadians(f32 in);
 
         // Return the given angular value in radians converted to degrees
-        inline NAT_API f32 ToDegrees(f32 in);
+        CUDA_FUNCTION inline NAT_API f32 ToDegrees(f32 in);
 
-        inline NAT_API f32 Clamp(f32 in, f32 min = 0.0f, f32 max = 1.0f);
+        CUDA_FUNCTION inline NAT_API f32 Clamp(f32 in, f32 min = 0.0f, f32 max = 1.0f);
 
-        inline NAT_API Vec2 Clamp(Vec2 in, f32 min = 0.0f, f32 max = 1.0f);
+        CUDA_FUNCTION inline NAT_API Vec2 Clamp(Vec2 in, f32 min = 0.0f, f32 max = 1.0f);
 
-        inline NAT_API Vec3 Clamp(Vec3 in, f32 min = 0.0f, f32 max = 1.0f);
+        CUDA_FUNCTION inline NAT_API Vec3 Clamp(Vec3 in, f32 min = 0.0f, f32 max = 1.0f);
 
-        inline NAT_API s32 IClamp(s32 in, s32 min, s32 max);
+        CUDA_FUNCTION inline NAT_API s32 IClamp(s32 in, s32 min, s32 max);
 
-        inline NAT_API u32 UClamp(u32 in, u32 min, u32 max);
+        CUDA_FUNCTION inline NAT_API u32 UClamp(u32 in, u32 min, u32 max);
 
-        inline NAT_API f32 Lerp(f32 a, f32 b, f32 delta);
+        CUDA_FUNCTION inline NAT_API f32 Lerp(f32 a, f32 b, f32 delta);
 
-        inline NAT_API Vec3 Lerp(Vec3 a, Vec3 b, f32 delta);
+        CUDA_FUNCTION inline NAT_API Vec3 Lerp(Vec3 a, Vec3 b, f32 delta);
 
-        inline NAT_API f32 Mod(f32 in, f32 value);
+        CUDA_FUNCTION inline NAT_API f32 Mod(f32 in, f32 value);
 
-        inline NAT_API Vec2 Mod(Vec2 in, f32 value);
+        CUDA_FUNCTION inline NAT_API Vec2 Mod(Vec2 in, f32 value);
 
-        inline NAT_API Vec3 Mod(Vec3 in, f32 value);
+        CUDA_FUNCTION inline NAT_API Vec3 Mod(Vec3 in, f32 value);
 
-        inline NAT_API s32 IMod(s32 in, s32 value);
+        CUDA_FUNCTION inline NAT_API s32 IMod(s32 in, s32 value);
 
-        inline NAT_API f32 MinF(f32 a, f32 b);
+        CUDA_FUNCTION inline NAT_API f32 MinF(f32 a, f32 b);
 
-        inline NAT_API f32 MaxF(f32 a, f32 b);
+        CUDA_FUNCTION inline NAT_API f32 MaxF(f32 a, f32 b);
 
-        inline NAT_API Vec3 MinV(Vec3 a, Vec3 b);
+        CUDA_FUNCTION inline NAT_API Vec3 MinV(Vec3 a, Vec3 b);
 
-        inline NAT_API Vec3 MaxV(Vec3 a, Vec3 b);
+        CUDA_FUNCTION inline NAT_API Vec3 MaxV(Vec3 a, Vec3 b);
 
-        inline NAT_API s32 MinI(s32 a, s32 b);
+        CUDA_FUNCTION inline NAT_API s32 MinI(s32 a, s32 b);
 
-        inline NAT_API s32 MaxI(s32 a, s32 b);
+        CUDA_FUNCTION inline NAT_API s32 MaxI(s32 a, s32 b);
 
         // Smooth min function
-        inline NAT_API f32 SMin(f32 a, f32 b, f32 delta);
+        CUDA_FUNCTION inline NAT_API f32 SMin(f32 a, f32 b, f32 delta);
 
-        inline NAT_API bool IsNear(f32 a, f32 b, f32 prec = 0.0001f);
+        CUDA_FUNCTION inline NAT_API bool IsNear(f32 a, f32 b, f32 prec = 0.0001f);
 
         // Returns a string with the hex representation of number
         // TODO Test parity with big/little endian
@@ -780,6 +790,9 @@ namespace Maths
         inline NAT_API void GetHex(char* buffer, u64 number);
 
         inline NAT_API u64 ReadHex(const std::string& input);
+
+        // Set of functions used to generate some shapes
+        // TODO is this still relevant ?
 
         void NAT_API GenerateSphere(s32 x, s32 y, std::vector<Vec3>* PosOut, std::vector<Vec3>* NormOut, std::vector<Vec2>* UVOut);
 

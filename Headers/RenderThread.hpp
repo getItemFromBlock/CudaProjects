@@ -8,6 +8,7 @@
 #include "Types.hpp"
 #include "Signal.hpp"
 #include "Kernel.hpp"
+#include "Maths/Maths.hpp"
 
 class RenderThread
 {
@@ -15,8 +16,8 @@ public:
 	RenderThread() {};
 	~RenderThread() {};
 
-	void Init(HWND hwnd, u32 width, u32 height);
-	void Resize(u32 newWidth, u32 newHeight);
+	void Init(HWND hwnd, Maths::IVec2 res, bool isRealTime);
+	void Resize(Maths::IVec2 newRes);
 	void Quit();
 private:
 	std::thread thread;
@@ -26,12 +27,11 @@ private:
 	Core::Signal resize;
 	Core::Signal exit;
 	std::vector<u32> colorBuffer;
-	u32 width = 0;
-	u32 height = 0;
-	u32 storedWidth = 0;
-	u32 storedHeight = 0;
+	Maths::IVec2 res;
+	Maths::IVec2 storedRes;
 
-	void ThreadFunc();
+	void ThreadFuncRealTime();
+	void ThreadFuncFrames();
 	void CopyToScreen();
 	void RunKernels();
 	void HandleResize();

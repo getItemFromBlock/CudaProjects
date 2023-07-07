@@ -14,14 +14,19 @@ namespace Maths
 
     inline IVec2::IVec2(const Vec2 in) : x((s32)in.x), y((s32)in.y) {}
 
-    inline f32 IVec2::LengthSquared() const
+    inline s32 IVec2::Dot() const
     {
-        return (f32)(x * x + y * y);
+        return x * x + y * y;
     }
 
-    inline f32 IVec2::GetLength() const
+    inline s32 IVec2::Dot(IVec2 in) const
     {
-        return sqrtf(LengthSquared());
+        return x * in.x + y * in.y;
+    }
+
+    inline f32 IVec2::Length() const
+    {
+        return sqrtf(static_cast<f32>(Dot()));
     }
 
     inline IVec2 IVec2::operator+(const IVec2 a) const
@@ -130,7 +135,7 @@ namespace Maths
 
 #pragma region Vec2
 
-    inline f32 Vec2::LengthSquared() const
+    inline f32 Vec2::Dot() const
     {
         return (x * x + y * y);
     }
@@ -140,9 +145,9 @@ namespace Maths
         return Vec2(cosf(angle), sinf(angle));
     }
 
-    inline f32 Vec2::GetLength() const
+    inline f32 Vec2::Length() const
     {
-        return sqrtf(LengthSquared());
+        return sqrtf(Dot());
     }
 
     inline Vec2 Vec2::operator+(const Vec2 a) const
@@ -272,19 +277,19 @@ namespace Maths
         return (res < VEC_COLLINEAR_PRECISION);
     }
 
-    inline f32 Vec2::DotProduct(Vec2 a) const
+    inline f32 Vec2::Dot(Vec2 a) const
     {
         return (a.x * x + a.y * y);
     }
 
-    inline f32 Vec2::CrossProduct(Vec2 a) const
+    inline f32 Vec2::Cross(Vec2 a) const
     {
         return (x * a.y - y * a.x);
     }
 
-    inline Vec2 Vec2::UnitVector() const
+    inline Vec2 Vec2::Normalize() const
     {
-        return operator/(GetLength());
+        return operator/(Length());
     }
 
     inline Vec2 Vec2::Negate() const
@@ -323,6 +328,21 @@ namespace Maths
 #pragma region IVec3
 
     inline IVec3::IVec3(const Vec3& in) : x((s32)in.x), y((s32)in.y), z((s32)in.z) {}
+
+    inline s32 IVec3::Dot() const
+    {
+        return x * x + y * y + z * z;
+    }
+
+    inline s32 IVec3::Dot(IVec3 in) const
+    {
+        return x * in.x + y * in.y + z * in.z;
+    }
+
+    inline f32 IVec3::Length() const
+    {
+        return sqrtf(static_cast<f32>(Dot()));
+    }
 
     inline IVec3 IVec3::operator+(const IVec3& a) const
     {
@@ -454,14 +474,14 @@ namespace Maths
 
 #pragma region Vec3
 
-    inline f32 Vec3::LengthSquared() const
+    inline f32 Vec3::Dot() const
     {
         return (x * x + y * y + z * z);
     }
 
-    inline f32 Vec3::GetLength() const
+    inline f32 Vec3::Length() const
     {
-        return sqrtf(LengthSquared());
+        return sqrtf(Dot());
     }
 
     inline Vec3 Vec3::operator+(const Vec3& a) const
@@ -594,30 +614,30 @@ namespace Maths
         return *((&x) + a);
     }
 
-    inline f32 Vec3::DotProduct(Vec3 a) const
+    inline f32 Vec3::Dot(Vec3 a) const
     {
         return (a.x * x + a.y * y + a.z * z);
     }
 
     inline Vec3 Vec3::Reflect(const Vec3& normal)
     {
-        return operator-(normal * (2 * DotProduct(normal)));
+        return operator-(normal * (2 * Dot(normal)));
     }
 
     inline bool Vec3::IsCollinearWith(Vec3 a) const
     {
-        f32 res = DotProduct(a);
+        f32 res = Dot(a);
         return (res < VEC_COLLINEAR_PRECISION);
     }
 
-    inline Vec3 Vec3::CrossProduct(Vec3 a) const
+    inline Vec3 Vec3::Cross(Vec3 a) const
     {
         return Vec3((y * a.z) - (z * a.y), (z * a.x) - (x * a.z), (x * a.y) - (y * a.x));
     }
 
-    inline Vec3 Vec3::UnitVector() const
+    inline Vec3 Vec3::Normalize() const
     {
-        return operator/(GetLength());
+        return operator/(Length());
     }
 
     inline Vec3 Vec3::Negate() const
@@ -648,20 +668,20 @@ namespace Maths
         return Vec4(GetVector() / w);
     }
 
-    inline Vec4 Vec4::UnitVector() const
+    inline Vec4 Vec4::Normalize() const
     {
         Vec4 homogenized = Homogenize();
-        return homogenized / homogenized.GetVector().GetLength();
+        return homogenized / homogenized.GetVector().Length();
     }
 
-    inline f32 Vec4::LengthSquared() const
+    inline f32 Vec4::Dot() const
     {
-        return Homogenize().GetVector().LengthSquared();
+        return Homogenize().GetVector().Dot();
     }
 
-    inline f32 Vec4::GetLength() const
+    inline f32 Vec4::Length() const
     {
-        return sqrtf(LengthSquared());
+        return sqrtf(Dot());
     }
 
     inline Vec4 Vec4::operator+(const Vec4& a) const
@@ -803,16 +823,16 @@ namespace Maths
 
     inline bool Vec4::IsCollinearWith(Vec4 a) const
     {
-        f32 res = DotProduct(a);
+        f32 res = Dot(a);
         return (res < VEC_COLLINEAR_PRECISION);
     }
 
-    inline f32 Vec4::DotProduct(Vec4 a) const
+    inline f32 Vec4::Dot(Vec4 a) const
     {
         return (a.x * x + a.y * y + a.z * z + a.w * w);
     }
 
-    inline Vec4 Vec4::CrossProduct(Vec4 a) const
+    inline Vec4 Vec4::Cross(Vec4 a) const
     {
         return Vec4((y * a.z) - (z * a.y), (z * a.x) - (x * a.z), (x * a.y) - (y * a.x), 1.0f);
     }
@@ -839,7 +859,7 @@ namespace Maths
 
     inline f32 Vec4::GetSignedDistanceToPlane(const Vec3& point) const
     {
-        return GetVector().DotProduct(point) - w;
+        return GetVector().Dot(point) - w;
     }
 
 #pragma endregion
@@ -965,14 +985,14 @@ namespace Maths
         }
     }
 
-    inline f32 Quat::LengthSquared() const
+    inline f32 Quat::Dot() const
     {
-        return a*a + v.LengthSquared();
+        return a*a + v.Dot();
     }
 
-    inline f32 Quat::GetLength() const
+    inline f32 Quat::Length() const
     {
-        return sqrtf(LengthSquared());
+        return sqrtf(Dot());
     }
 
     inline Quat Quat::Conjugate() const
@@ -982,12 +1002,12 @@ namespace Maths
 
     inline Quat Quat::Normalize() const
     {
-        return operator/(GetLength());
+        return operator/(Length());
     }
 
     inline Quat Quat::NormalizeAxis() const
     {
-        f32 vsq = v.LengthSquared();
+        f32 vsq = v.Dot();
         f32 asq = a * a;
         if (asq > 1.0f || vsq < 0.0001f) return Normalize();
         f32 b = sqrtf((1 - asq) / (vsq));
@@ -996,8 +1016,8 @@ namespace Maths
 
     inline Quat Maths::Quat::Inverse() const
     {
-        if (LengthSquared() < 1e-5f) return *this;
-        return Conjugate()/GetLength();
+        if (Dot() < 1e-5f) return *this;
+        return Conjugate()/Length();
     }
 
     inline Quat Quat::AxisAngle(Vec3 axis, f32 angle)
@@ -1079,7 +1099,7 @@ namespace Maths
 
     inline Quat Quat::operator*(const Quat& other) const
     {
-        return Quat(other.v * a + v * other.a + v.CrossProduct(other.v), a*other.a - v.DotProduct(other.v));
+        return Quat(other.v * a + v * other.a + v.Cross(other.v), a*other.a - v.Dot(other.v));
     }
 
     inline Vec3 Quat::operator*(const Vec3& other) const
