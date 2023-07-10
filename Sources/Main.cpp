@@ -7,16 +7,70 @@
 #include "EncoderThread.hpp"
 #include "Maths/Maths.hpp"
 
-bool str2int(s32& i, char const* s)
+struct Resolution
+{
+	const char* const name = nullptr;
+	const Maths::IVec2 value;
+};
+
+const Resolution const resolutions[] =
+{
+	{"hd",  Maths::IVec2(1280, 720)},
+	{"fhd", Maths::IVec2(1920,1080)},
+	{"2k",  Maths::IVec2(2560,1440)},
+	{"4k",  Maths::IVec2(3840,2160)},
+	{"8k",  Maths::IVec2(7680,4320)}
+};
+
+std::filesystem::path output = std::filesystem::current_path().append("output");
+
+bool ReadInteger(s32& i, char const* s, bool extended)
 {
 	char c;
 	std::stringstream ss(s);
 	ss >> i;
-	if (ss.fail() || ss.get(c) || i <= 0)
+	if (ss.fail() || (ss.get(c) && extended && c != 'x' && c != 'X') || i <= 0)
 	{
 		return false;
 	}
 	return true;
+}
+
+bool ReadResolution(Maths::IVec2& i, char const* s)
+{
+	if (!s || !*s)
+	{
+		std::cerr << "Invalid argument" << std::endl;
+		return false;
+	}
+	for (auto& res : resolutions)
+	{
+		if (!strcmp(s, res.name))
+		{
+			i = res.value;
+			return true;
+		}
+	}
+	if (!ReadInteger(i.x, s, true))
+	{
+		std::cerr << "Invalid argument " << s << std::endl;
+		return false;
+	}
+	for (auto c = s; *c != 0; ++c)
+	{
+		if (*c == 'x' || *c == 'X')
+		{
+			++c;
+			if (!ReadInteger(i.y, c, false))
+			{
+				std::cerr << "Invalid argument " << s << std::endl;
+				return false;
+			}
+			return true;
+		}
+	}
+	std::cerr << "Invalid argument " << s << std::endl;
+	return false;
 }
 
 void ParseArgs(int argc, char* argv[], Parameters& params)
@@ -26,24 +80,30 @@ void ParseArgs(int argc, char* argv[], Parameters& params)
 		if (argv[i][0] != '-' && argv[i][0] != '/') continue;
 		switch (argv[i][1])
 		{
-		case 'w':
-			if (!str2int(params.targetResolution.x, argv[i+1]))
+		case 's':
+			if (!ReadInteger(params.startFrame, argv[i + 1], false))
 			{
-				params.targetResolution.x = 1920;
-				std::cerr << "Invalid number " << argv[i+1] << std::endl;
+				params.startFrame = 0;
+				if (strcmp(argv[i + 1], "0"))
+				{
+					std::cerr << "Invalid number " << argv[i + 1] << std::endl;
+				}
 			}
-			++i;
-			break;
-		case 'h':
-			if (!str2int(params.targetResolution.y, argv[i+1]))
+			else
 			{
-				params.targetResolution.x = 1080;
-				std::cerr << "Invalid number " << argv[i + 1] << std::endl;
+				std::cout << "Starting at frame " << params.startFrame << std::endl;
 			}
 			++i;
 			break;
 		case 'r':
-			if (!str2int(params.targetFPS, argv[i + 1]))
+			if (!ReadResolution(params.targetResolution, argv[i+1]))
+			{
+				params.targetResolution = Maths::IVec2(1920,1080);
+			}
+			++i;
+			break;
+		case 'f':
+			if (!ReadInteger(params.targetFPS, argv[i + 1], false))
 			{
 				params.targetFPS = 30;
 				std::cerr << "Invalid number " << argv[i + 1] << std::endl;
@@ -60,19 +120,18 @@ int main(int argc, char* argv[])
 {
 	Parameters params;
 	ParseArgs(argc, argv, params);
-	std::filesystem::path p = std::filesystem::current_path().append("output");
-	if (!std::filesystem::exists(p))
+	if (!std::filesystem::exists(output))
 	{
-		std::filesystem::create_directory(p);
+		std::filesystem::create_directory(output);
 	}
-	else
+	else if (params.startFrame == 0)
 	{
-		for (const auto& entry : std::filesystem::directory_iterator(p))
+		for (const auto& entry : std::filesystem::directory_iterator(output))
 		{
 			std::filesystem::remove_all(entry.path());
 		}
 	}
-	u32 threadCount = std::thread::hardware_concurrency();
+	const u32 threadCount = std::thread::hardware_concurrency();
 	std::cout << "Using " << threadCount << " threads for encoding" << std::endl;
 	RenderThread th;
 	EncoderThread* threadPool = new EncoderThread[threadCount];
@@ -81,7 +140,7 @@ int main(int argc, char* argv[])
 		threadPool[i].Init(params);
 	}
 	th.Init(params);
-	u64 current_frame = 0;
+	u64 current_frame = params.startFrame;
 	u64 max_frames = static_cast<u64>(LENGTH * params.targetFPS);
 	while (!th.HasFinished())
 	{
@@ -91,24 +150,34 @@ int main(int argc, char* argv[])
 			bool assigned = false;
 			while (!assigned)
 			{
+				u32 selected = ~0;
+				u32 busy = 0;
 				for (u32 i = 0; i < threadCount; ++i)
 				{
 					if (threadPool[i].IsAvailable())
 					{
-						threadPool[i].AssignFrame(current_frame, frame);
-						std::cout << "Encoding frame " << current_frame << " out of " << max_frames << std::endl;
+						if (assigned) continue;
+						selected = i;
 						assigned = true;
-						break;
+					}
+					else
+					{
+						++busy;
 					}
 				}
-				if (assigned) break;
-				std::cout << "No more thread available !" << std::endl;
-				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+				if (assigned)
+				{
+					threadPool[selected].AssignFrame(current_frame, frame);
+					std::cout << "Encoding frame " << current_frame << " out of " << max_frames << " - ThreadPool usage : " << busy+1 << "/" << threadCount << '\r';
+					break;
+				}
+				std::cout << "No more thread available !" << '\r';
+				std::this_thread::sleep_for(std::chrono::milliseconds(200));
 			}
 			current_frame++;
 		}
 	}
 	th.Quit();
 	delete[] threadPool;
-	std::cout << "All done, frames are located here: " << p << std::endl;
+	std::cout << "All done, frames are located here: " << output << std::endl;
 }

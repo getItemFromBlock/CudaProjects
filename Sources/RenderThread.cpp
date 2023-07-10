@@ -112,8 +112,8 @@ void RenderThread::ThreadFuncRealTime()
 void RenderThread::ThreadFuncFrames()
 {
 	InitThread();
-	f64 iTime = 0;
-	u64 frame = 0;
+	u64 frame = params.startFrame;
+	f64 iTime = 1.0 / params.targetFPS * params.startFrame;
 	while (iTime < LENGTH && !exit.Load())
 	{
 		kernels.RunKernels(colorBuffer.data(), iTime);
