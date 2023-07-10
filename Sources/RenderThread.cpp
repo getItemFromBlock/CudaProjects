@@ -129,7 +129,7 @@ void RenderThread::ThreadFuncFrames()
 			bufferedFrames.clear();
 			queueLock.Store(false);
 		}
-		++frame;
+		frame += count;
 		iTime += 1.0 * count / params.targetFPS;
 	}
 	kernels.ClearKernels();
