@@ -51,7 +51,7 @@ void CudaUtil::PrintDevicesName()
         cudaDeviceProp props = { 0 };
         cudaGetDeviceProperties(&props, i);
         int score = props.maxThreadsPerBlock * props.major * 10 * props.minor;
-        std::cout << "GPU id " << i << ": " << props.name << " has a score of " << score;
+        std::cout << "GPU id " << i << ": " << props.name << " has a score of " << score << std::endl;
     }
 }
 
