@@ -101,6 +101,7 @@
     <ClInclude Include="Headers\EncoderThread.hpp" />
     <ClInclude Include="Headers\Kernel.cuh" />
     <ClInclude Include="Headers\Maths\Maths.hpp" />
+    <ClInclude Include="Headers\Maths\RayTracing.hpp" />
     <ClInclude Include="Headers\RenderThread.hpp" />
     <ClInclude Include="Headers\Signal.hpp" />
     <ClInclude Include="Headers\Types.hpp" />
