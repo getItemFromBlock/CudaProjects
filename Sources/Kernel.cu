@@ -6,11 +6,6 @@ using namespace Maths;
 
 #define MAX_ITER 2048
 
-__device__ f64 lerp(f64 a, f64 b, f64 f)
-{
-    return a * (1.0 - f) + (b * f);
-}
-
 __device__ void HSVtoRGB(Vec3& rgb, const Vec3& hsv)
 {
     f32 fC = hsv.z * hsv.y; // Chroma
@@ -106,40 +101,48 @@ __global__ void fractalKernel(u32* a, IVec2 res, f64 iTime)
     a[index] = col;
 }
 
-void Kernel::InitKernels(IVec2 resIn)
+void Kernel::InitKernels(IVec2 resIn, s32 id)
 {
     res = resIn;
-    utils.SelectDevice();
-    dev_img = utils.Allocate<u32>(1llu*res.x*res.y);
+    if (id < 0)
+    {
+        deviceID = CudaUtil::SelectDevice();
+    }
+    else
+    {
+        deviceID = id;
+        CudaUtil::UseDevice(id);
+    }
+    dev_img = CudaUtil::Allocate<u32>(1llu*res.x*res.y);
 }
 
 void Kernel::Resize(IVec2 resIn)
 {
     if (resIn.x * resIn.y > res.x * res.y) // no need to resize the buffer down, it is already large enouth to hold the new image
     {
-        utils.Free(dev_img);
-        dev_img = utils.Allocate<u32>(1llu * resIn.x * resIn.y);
+        CudaUtil::Free(dev_img);
+        dev_img = CudaUtil::Allocate<u32>(1llu * resIn.x * resIn.y);
     }
     res = resIn;
 }
 
 void Kernel::ClearKernels()
 {
-    utils.Free(dev_img);
-    utils.ResetDevice();
+    CudaUtil::Free(dev_img);
+    CudaUtil::ResetDevice();
 }
 
 void Kernel::RunKernels(u32* img, f64 iTime)
 {
     u64 count = 1llu * res.x * res.y;
     u64 size = sizeof(u32) * count;
-    s32 M = utils.GetMaxThreads();
+    s32 M = CudaUtil::GetMaxThreads(deviceID);
     fractalKernel<<<((u32)count + M - 1) / M, M>>>(dev_img, res, iTime);
 
-    utils.CheckError(cudaGetLastError(), "addKernel launch failed: %s");
-    utils.SynchronizeDevice();
+    CudaUtil::CheckError(cudaGetLastError(), "addKernel launch failed: %s");
+    CudaUtil::SynchronizeDevice();
 
-    utils.Copy(dev_img, img, size, CudaUtil::CopyType::DToH);
+    CudaUtil::Copy(dev_img, img, size, CudaUtil::CopyType::DToH);
 }
 
 void Kernel::DrawText(u32* img, const std::string& text, IVec2 pos, u32 size)

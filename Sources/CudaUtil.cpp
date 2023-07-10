@@ -8,7 +8,7 @@ void CudaUtil::ResetDevice()
 	CheckError(cudaDeviceReset(), "cudaDeviceReset failed: %s");
 }
 
-void CudaUtil::SelectDevice()
+s32 CudaUtil::SelectDevice()
 {
     s32 count = 0;
     CheckError(cudaGetDeviceCount(&count));
@@ -26,7 +26,6 @@ void CudaUtil::SelectDevice()
         {
             max = score;
             selected = i;
-            maxThreads = props.maxThreadsPerBlock;
         }
     }
     for (s32 i = 0; i < count; ++i)
@@ -36,6 +35,24 @@ void CudaUtil::SelectDevice()
         std::cout << std::endl;
     }
     CheckError(cudaSetDevice(selected));
+    return selected;
+}
+
+void CudaUtil::UseDevice(s32 id)
+{
+    CheckError(cudaSetDevice(id));
+}
+
+void CudaUtil::PrintDevicesName()
+{
+    s32 count = GetDevicesCount();
+    for (int i = 0; i < count; ++i)
+    {
+        cudaDeviceProp props = { 0 };
+        cudaGetDeviceProperties(&props, i);
+        int score = props.maxThreadsPerBlock * props.major * 10 * props.minor;
+        std::cout << "GPU id " << i << ": " << props.name << " has a score of " << score;
+    }
 }
 
 void CudaUtil::CheckError(cudaError_t val, const char* text)
@@ -68,7 +85,16 @@ void CudaUtil::Copy(const void* source, void* dest, u64 size, CopyType kind)
 	CheckError(cudaMemcpy(dest, source, size, static_cast<cudaMemcpyKind>(kind)), "cudaMemcpy failed: %s");
 }
 
-s32 CudaUtil::GetMaxThreads()
+s32 CudaUtil::GetMaxThreads(s32 deviceID)
 {
-    return maxThreads;
+    cudaDeviceProp props = { 0 };
+    cudaGetDeviceProperties(&props, deviceID);
+    return props.maxThreadsPerBlock;
+}
+
+s32 CudaUtil::GetDevicesCount()
+{
+    s32 count = 0;
+    CheckError(cudaGetDeviceCount(&count));
+    return count;
 }

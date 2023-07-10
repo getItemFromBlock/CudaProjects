@@ -29,17 +29,23 @@ struct Parameters
 	s32 startFrame = 0;
 };
 
+struct FrameHolder
+{
+	u64 frameID = 0;
+	std::vector<u32> frameData;
+};
+
 class RenderThread
 {
 public:
 	RenderThread() {};
 	~RenderThread() {};
 
-	void Init(const Parameters& params);
+	void Init(const Parameters& params, s32 id);
 	void Init(HWND hwnd, Maths::IVec2 res);
 	void Resize(Maths::IVec2 newRes);
 	bool HasFinished() const;
-	std::vector<std::vector<u32>> GetFrames();
+	std::vector<FrameHolder> GetFrames();
 	void Quit();
 private:
 	std::thread thread;
@@ -50,11 +56,12 @@ private:
 	Core::Signal exit;
 	Core::Signal queueLock;
 	std::vector<u32> colorBuffer;
-	std::vector<std::vector<u32>> queuedFrames;
-	std::vector<std::vector<u32>> bufferedFrames;
+	std::vector<FrameHolder> queuedFrames;
+	std::vector<FrameHolder> bufferedFrames;
 	Maths::IVec2 res;
 	Maths::IVec2 storedRes;
 	Parameters params;
+	s32 threadID = -1;
 
 	void ThreadFuncRealTime();
 	void ThreadFuncFrames();

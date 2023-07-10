@@ -2,6 +2,7 @@
 #include <thread>
 #include <filesystem>
 #include <sstream>
+#include <chrono>
 
 #include "RenderThread.hpp"
 #include "EncoderThread.hpp"
@@ -13,7 +14,7 @@ struct Resolution
 	const Maths::IVec2 value;
 };
 
-const Resolution const resolutions[] =
+const Resolution resolutions[] =
 {
 	{"hd",  Maths::IVec2(1280, 720)},
 	{"fhd", Maths::IVec2(1920,1080)},
@@ -116,6 +117,15 @@ void ParseArgs(int argc, char* argv[], Parameters& params)
 	}
 }
 
+bool HasFinished(RenderThread* threads, u32 count)
+{
+	for (u32 i = 0; i < count; ++i)
+	{
+		if (!threads[i].HasFinished()) return false;
+	}
+	return true;
+}
+
 int main(int argc, char* argv[])
 {
 	Parameters params;
@@ -133,24 +143,37 @@ int main(int argc, char* argv[])
 	}
 	const u32 threadCount = std::thread::hardware_concurrency();
 	std::cout << "Using " << threadCount << " threads for encoding" << std::endl;
-	RenderThread th;
 	EncoderThread* threadPool = new EncoderThread[threadCount];
 	for (u32 i = 0; i < threadCount; ++i)
 	{
 		threadPool[i].Init(params);
 	}
-	th.Init(params);
-	u64 current_frame = params.startFrame;
-	u64 max_frames = static_cast<u64>(LENGTH * params.targetFPS);
-	while (!th.HasFinished())
+	std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
+	auto start = now.time_since_epoch();
+	const s32 deviceCount = CudaUtil::GetDevicesCount();
+	CudaUtil::PrintDevicesName();
+	RenderThread* deviceThreadPool = new RenderThread[deviceCount];
+	for (s32 i = 0; i < deviceCount; ++i)
 	{
-		auto frames = th.GetFrames();
+		deviceThreadPool[i].Init(params, i);
+	}
+	std::cout << std::endl;
+	u64 max_frames = static_cast<u64>(LENGTH * params.targetFPS);
+	while (!HasFinished(deviceThreadPool, deviceCount))
+	{
+		std::vector<FrameHolder> frames;
+		for (s32 d = 0; d < deviceCount; ++d)
+		{
+			auto data = deviceThreadPool[d].GetFrames();
+			if (data.empty()) continue;
+			frames.insert(frames.end(), data.begin(), data.end());
+		}
 		for (auto& frame : frames)
 		{
 			bool assigned = false;
 			while (!assigned)
 			{
-				u32 selected = ~0;
+				u32 selected = 0;
 				u32 busy = 0;
 				for (u32 i = 0; i < threadCount; ++i)
 				{
@@ -167,17 +190,24 @@ int main(int argc, char* argv[])
 				}
 				if (assigned)
 				{
-					threadPool[selected].AssignFrame(current_frame, frame);
-					std::cout << "Encoding frame " << current_frame << " out of " << max_frames << " - ThreadPool usage : " << busy+1 << "/" << threadCount << '\r';
+					threadPool[selected].AssignFrame(frame.frameID, frame.frameData);
+					std::cout << "Encoding frame " << frame.frameID << " out of " << max_frames << " - ThreadPool usage : " << busy + 1 << "/" << threadCount << "               " << '\r';
 					break;
 				}
-				std::cout << "No more thread available !" << '\r';
+				std::cout << "No more thread available !" << "                                          " << '\r';
 				std::this_thread::sleep_for(std::chrono::milliseconds(200));
 			}
-			current_frame++;
 		}
 	}
-	th.Quit();
+	for (s32 d = 0; d < deviceCount; ++d)
+	{
+		deviceThreadPool[d].Quit();
+	}
+	delete[] deviceThreadPool;
 	delete[] threadPool;
-	std::cout << "All done, frames are located here: " << output << std::endl;
+	now = std::chrono::system_clock::now();
+	auto duration = now.time_since_epoch() - start;
+	auto micros = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
+	f32 iTime = micros / 1000000.0f;
+	std::cout << "Done in " << iTime << " seconds; Frames are located here : " << output << "               " << std::endl;
 }

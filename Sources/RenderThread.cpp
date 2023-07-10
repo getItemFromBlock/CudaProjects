@@ -11,9 +11,10 @@ void RenderThread::Init(HWND hwnIn, IVec2 resIn)
 	thread = std::thread(&RenderThread::ThreadFuncRealTime, this);
 }
 
-void RenderThread::Init(const Parameters& paramsIn)
+void RenderThread::Init(const Parameters& paramsIn, s32 id)
 {
 	params = paramsIn;
+	threadID = id;
 	res = IVec2(params.targetResolution.x, params.targetResolution.y);
 	thread = std::thread(&RenderThread::ThreadFuncFrames, this);
 }
@@ -33,9 +34,9 @@ bool RenderThread::HasFinished() const
 	return exit.Load();
 }
 
-std::vector<std::vector<u32>> RenderThread::GetFrames()
+std::vector<FrameHolder> RenderThread::GetFrames()
 {
-	std::vector<std::vector<u32>> result;
+	std::vector<FrameHolder> result;
 	if (queueLock.Load()) return result;
 	result = queuedFrames;
 	queueLock.Store(true);
@@ -92,7 +93,7 @@ void RenderThread::InitThread()
 {
 	std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
 	start = now.time_since_epoch();
-	kernels.InitKernels(res);
+	kernels.InitKernels(res, threadID);
 	colorBuffer.resize(res.x * res.y);
 }
 
@@ -112,20 +113,24 @@ void RenderThread::ThreadFuncRealTime()
 void RenderThread::ThreadFuncFrames()
 {
 	InitThread();
-	u64 frame = params.startFrame;
+	u64 frame = params.startFrame + threadID;
 	f64 iTime = 1.0 / params.targetFPS * params.startFrame;
+	const s32 count = CudaUtil::GetDevicesCount();
 	while (iTime < LENGTH && !exit.Load())
 	{
 		kernels.RunKernels(colorBuffer.data(), iTime);
-		bufferedFrames.push_back(colorBuffer);
+		FrameHolder fr;
+		fr.frameData = colorBuffer;
+		fr.frameID = frame;
+		bufferedFrames.push_back(fr);
 		if (queueLock.Load())
 		{
 			queuedFrames = bufferedFrames;
 			bufferedFrames.clear();
 			queueLock.Store(false);
 		}
-		frame++;
-		iTime += 1.0 / params.targetFPS;
+		++frame;
+		iTime += 1.0 * count / params.targetFPS;
 	}
 	kernels.ClearKernels();
 	exit.Store(true);

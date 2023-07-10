@@ -3,9 +3,8 @@
 #include "cuda_runtime.h"
 #include "Types.hpp"
 
-class CudaUtil
+namespace CudaUtil
 {
-public:
 	enum class CopyType : u8
 	{
 		HToH = 0,
@@ -16,13 +15,16 @@ public:
 	};
 
 	void ResetDevice();
-	void SelectDevice();
+	s32 SelectDevice();
 	void CheckError(cudaError_t val, const char* text = "checkError failed: %s");
 	void SynchronizeDevice();
 	void* Allocate(u64 size);
 	void Free(void* ptr);
 	void Copy(const void* source, void* dest, u64 size, CopyType kind);
-	s32 GetMaxThreads();
+	s32 GetMaxThreads(s32 deviceID);
+	s32 GetDevicesCount();
+	void UseDevice(s32 deviceID);
+	void PrintDevicesName();
 
 	template<typename T>
 	T* Allocate(u64 count)
@@ -31,6 +33,4 @@ public:
 		result = static_cast<T*>(Allocate(count * sizeof(T)));
 		return result;
 	}
-private:
-	s32 maxThreads = 0;
 };
