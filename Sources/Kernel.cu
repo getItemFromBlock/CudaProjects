@@ -144,16 +144,3 @@ void Kernel::RunKernels(u32* img, f64 iTime)
 
     CudaUtil::Copy(dev_img, img, size, CudaUtil::CopyType::DToH);
 }
-
-void Kernel::DrawText(u32* img, const std::string& text, IVec2 pos, u32 size)
-{
-    for (auto c : text)
-    {
-        // TODO
-    }
-}
-
-void Kernel::SetFont(const u8* imgData, IVec2 res)
-{
-    // TODO
-}
