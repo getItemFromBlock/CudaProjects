@@ -114,7 +114,7 @@ void RenderThread::ThreadFuncFrames()
 {
 	InitThread();
 	u64 frame = params.startFrame + threadID;
-	f64 iTime = 1.0 / params.targetFPS * params.startFrame;
+	f64 iTime = 1.0 / params.targetFPS * frame;
 	const s32 count = CudaUtil::GetDevicesCount();
 	while (iTime < LENGTH && !exit.Load())
 	{
