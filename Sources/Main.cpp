@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <sstream>
 #include <chrono>
+#include <string.h>
 
 #include "RenderThread.hpp"
 #include "EncoderThread.hpp"
