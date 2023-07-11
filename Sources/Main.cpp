@@ -160,14 +160,19 @@ int main(int argc, char* argv[])
 	}
 	std::cout << std::endl;
 	u64 max_frames = static_cast<u64>(LENGTH * params.targetFPS);
-	while (!HasFinished(deviceThreadPool, deviceCount))
+	while (true)
 	{
 		std::vector<FrameHolder> frames;
+		bool finished = HasFinished(deviceThreadPool, deviceCount);
 		for (s32 d = 0; d < deviceCount; ++d)
 		{
 			auto data = deviceThreadPool[d].GetFrames();
 			if (data.empty()) continue;
 			frames.insert(frames.end(), data.begin(), data.end());
+		}
+		if (frames.empty() && finished)
+		{
+			break;
 		}
 		for (auto& frame : frames)
 		{
@@ -205,6 +210,10 @@ int main(int argc, char* argv[])
 		deviceThreadPool[d].Quit();
 	}
 	delete[] deviceThreadPool;
+	for (s32 d = 0; d < threadCount; ++d)
+	{
+		threadPool[d].Quit();
+	}
 	delete[] threadPool;
 	now = std::chrono::system_clock::now();
 	auto duration = now.time_since_epoch() - start;

@@ -132,6 +132,16 @@ void RenderThread::ThreadFuncFrames()
 		frame += count;
 		iTime += 1.0 * count / params.targetFPS;
 	}
+	if (!bufferedFrames.empty())
+	{
+		while (!queueLock.Load())
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		}
+		queuedFrames = bufferedFrames;
+		bufferedFrames.clear();
+		queueLock.Store(false);
+	}
 	kernels.ClearKernels();
 	exit.Store(true);
 }

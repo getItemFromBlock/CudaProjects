@@ -17,7 +17,6 @@ EncoderThread::EncoderThread()
 
 EncoderThread::~EncoderThread()
 {
-	Quit();
 }
 
 void EncoderThread::Init(const Parameters& paramsIn)
