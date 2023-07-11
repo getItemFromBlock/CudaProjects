@@ -11,7 +11,7 @@ CUDA_ROOT_DIR=/usr/local/cuda
 
 # CC compiler options:
 CC=g++
-CC_FLAGS=-std=c++17 -IIncludes -IHeaders -I$(CUDA_ROOT_DIR)/include
+CC_FLAGS=-std=c++17 -IIncludes -IHeaders -I$(CUDA_ROOT_DIR)/include -O3
 CC_LIBS=-lpthread
 
 ##########################################################
@@ -20,7 +20,7 @@ CC_LIBS=-lpthread
 
 # NVCC compiler options:
 NVCC=nvcc
-NVCC_FLAGS=-IIncludes -IHeaders
+NVCC_FLAGS=-IIncludes -IHeaders -O3
 NVCC_LIBS=
 
 # CUDA library directory:

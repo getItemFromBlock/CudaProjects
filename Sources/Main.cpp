@@ -142,7 +142,7 @@ int main(int argc, char* argv[])
 			std::filesystem::remove_all(entry.path());
 		}
 	}
-	const u32 threadCount = std::thread::hardware_concurrency();
+	const u32 threadCount = std::thread::hardware_concurrency() > 1 ? std::thread::hardware_concurrency() - 1 : std::thread::hardware_concurrency();
 	std::cout << "Using " << threadCount << " threads for encoding" << std::endl;
 	EncoderThread* threadPool = new EncoderThread[threadCount];
 	for (u32 i = 0; i < threadCount; ++i)
@@ -201,7 +201,7 @@ int main(int argc, char* argv[])
 					break;
 				}
 				std::cout << "No more thread available !" << "                                          " << '\r';
-				std::this_thread::sleep_for(std::chrono::milliseconds(200));
+				std::this_thread::sleep_for(std::chrono::milliseconds(10));
 			}
 		}
 	}
