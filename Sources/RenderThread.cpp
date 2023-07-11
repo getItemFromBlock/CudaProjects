@@ -49,6 +49,11 @@ void RenderThread::Quit()
 	thread.join();
 }
 
+f32 RenderThread::GetElapsedTime()
+{
+	return elapsedTime;
+}
+
 void RenderThread::CopyToScreen()
 {
 #ifdef _WIN32
@@ -112,6 +117,8 @@ void RenderThread::ThreadFuncRealTime()
 
 void RenderThread::ThreadFuncFrames()
 {
+	std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
+	auto start = now.time_since_epoch();
 	InitThread();
 	u64 frame = params.startFrame + threadID;
 	f64 iTime = 1.0 / params.targetFPS * frame;
@@ -143,5 +150,9 @@ void RenderThread::ThreadFuncFrames()
 		queueLock.Store(false);
 	}
 	kernels.ClearKernels();
+	now = std::chrono::system_clock::now();
+	auto duration = now.time_since_epoch() - start;
+	auto micros = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
+	elapsedTime = micros / 1000000.0f;
 	exit.Store(true);
 }

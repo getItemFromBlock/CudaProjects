@@ -47,6 +47,7 @@ public:
 	bool HasFinished() const;
 	std::vector<FrameHolder> GetFrames();
 	void Quit();
+	f32 GetElapsedTime();
 private:
 	std::thread thread;
 	std::chrono::system_clock::duration start = std::chrono::system_clock::duration();
@@ -62,6 +63,7 @@ private:
 	Maths::IVec2 storedRes;
 	Parameters params;
 	s32 threadID = -1;
+	f32 elapsedTime = 0;
 
 	void ThreadFuncRealTime();
 	void ThreadFuncFrames();

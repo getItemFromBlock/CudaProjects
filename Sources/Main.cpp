@@ -208,9 +208,10 @@ int main(int argc, char* argv[])
 	for (s32 d = 0; d < deviceCount; ++d)
 	{
 		deviceThreadPool[d].Quit();
+		std::cout << "GPU " << d << " time: " << deviceThreadPool[d].GetElapsedTime() << "                                                         " << std::endl;
 	}
 	delete[] deviceThreadPool;
-	for (s32 d = 0; d < threadCount; ++d)
+	for (u32 d = 0; d < threadCount; ++d)
 	{
 		threadPool[d].Quit();
 	}
