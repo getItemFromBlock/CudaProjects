@@ -69,9 +69,9 @@ $(EXE) : $(OBJS)
 
 # Compile main .cpp file to object files:
 $(OBJ_DIR)/Main.o : $(SRC_DIR)/Main.cpp
-	$(CC) $(CC_FLAGS) -c $< -o $@ $(CC_LIBS)
 	mkdir bin
 	mkdir bin/Maths
+	$(CC) $(CC_FLAGS) -c $< -o $@ $(CC_LIBS)
 
 # Compile C++ source files to object files:
 $(OBJ_DIR)/%.o : $(SRC_DIR)/%.cpp $(INC_DIR)/%.hpp
