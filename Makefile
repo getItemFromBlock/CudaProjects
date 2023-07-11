@@ -69,8 +69,7 @@ $(EXE) : $(OBJS)
 
 # Compile main .cpp file to object files:
 $(OBJ_DIR)/Main.o : $(SRC_DIR)/Main.cpp
-	mkdir bin
-	mkdir bin/Maths
+	mkdir -p bin/Maths
 	$(CC) $(CC_FLAGS) -c $< -o $@ $(CC_LIBS)
 
 # Compile C++ source files to object files:
@@ -83,5 +82,5 @@ $(OBJ_DIR)/%.o : $(SRC_DIR)/%.cu $(INC_DIR)/%.cuh
 
 # Clean objects in object directory.
 clean:
-	$(RM) bin/*.o bin/Maths/*.o *.o $(EXE)
+	$(RM) -r bin/* $(EXE)
 
