@@ -1,6 +1,8 @@
-#include "Maths/RayTracing.hpp"
+#include "RayTracing/RayTracing.hpp"
 
-bool Maths::HitSphere(Ray r, Sphere sp, Vec2 bounds)
+using namespace Maths;
+
+bool RayTracing::HitSphere(Ray r, Sphere sp, Vec2 bounds)
 {
     f32 t0, t1;
     Vec3 L = r.pos - sp.pos;
@@ -36,13 +38,13 @@ bool Maths::HitSphere(Ray r, Sphere sp, Vec2 bounds)
     return true;
 }
 
-Maths::HitRecord Maths::HitTriangle(Ray r, Vertice* vertices, Maths::Vec2 bounds)
+RayTracing::HitRecord RayTracing::HitTriangle(Ray r, Vertice* vertices, Vec2 bounds)
 {
     HitRecord result;
-    Maths::Vec3 A = vertices[0].pos;
-    Maths::Vec3 AB = vertices[1].pos - A;
-    Maths::Vec3 AC = vertices[2].pos - A;
-    Maths::Vec3 bar;
+    Vec3 A = vertices[0].pos;
+    Vec3 AB = vertices[1].pos - A;
+    Vec3 AC = vertices[2].pos - A;
+    Vec3 bar;
     Vec3 pvec = r.dir.Cross(AC);
     f32 det = AB.Dot(pvec);
     if (det < 0.00001f) return result;
@@ -67,32 +69,5 @@ Maths::HitRecord Maths::HitTriangle(Ray r, Vertice* vertices, Maths::Vec2 bounds
         result.normal += vertices[i].normal * bar[i];
     }
     result.pos = r.pos + r.dir * result.dist;
-    result.color = bar;
     return result;
-}
-
-Maths::HitRecord Maths::Mesh::Intersect(Ray r, Maths::Vec2 bounds)
-{
-    HitRecord result;
-    if (!HitSphere(r, boundingSphere, bounds)) return result;
-    for (u32 i = 0; i < indiceCount; ++i)
-    {
-        HitRecord hit = HitTriangle(r, transformedVertices, bounds);
-        if (hit.dist < 0) continue;
-        result = hit;
-        bounds.y = hit.dist;
-    }
-    return result;
-}
-
-void Maths::Mesh::ApplyTransform(Maths::Vec3 pos, Maths::Quat rot, Maths::Vec3 scale, u32 index)
-{
-    transformedVertices[index].pos = rot * (sourceVertices[index].pos * scale) + pos;
-    transformedVertices[index].normal = rot * sourceVertices[index].normal;
-    transformedVertices[index].uv = sourceVertices[index].uv;
-}
-
-u32 Maths::Mesh::GetIndiceCount()
-{
-    return indiceCount;
 }

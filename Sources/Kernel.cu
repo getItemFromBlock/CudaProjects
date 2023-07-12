@@ -3,6 +3,7 @@
 #include "device_launch_parameters.h"
 
 using namespace Maths;
+using namespace RayTracing;
 
 #define MAX_ITER 2048
 
@@ -75,6 +76,11 @@ __device__ u32 mandelbrot(f64 x0, f64 y0)
     return iteration;
 }
 
+__global__ void rayTracingKernel()
+{
+
+}
+
 __global__ void fractalKernel(u32* a, IVec2 res, f64 iTime)
 {
     u64 index = 1llu * threadIdx.x + blockIdx.x * blockDim.x;
@@ -143,4 +149,37 @@ void Kernel::RunKernels(u32* img, f64 iTime)
     CudaUtil::SynchronizeDevice();
 
     CudaUtil::Copy(dev_img, img, size, CudaUtil::CopyType::DToH);
+}
+
+bool Kernel::LoadTexture(Texture* tex, Texture*& device_tex)
+{
+    if (!tex || tex->resolution.x <= 0 || tex->resolution.y <= 0 || !tex->data) return false;
+    device_tex = CudaUtil::Allocate<Texture>(1);
+    Texture tmp;
+    tmp.resolution = tex->resolution;
+    cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(8, 8, 8, 8, cudaChannelFormatKindUnsignedNormalized8X4);
+    cudaArray_t cuArray;
+    cudaMallocArray(&cuArray, &channelDesc, tmp.resolution.x, tmp.resolution.y);
+    const size_t spitch = tmp.resolution.x * 4;
+    // Copy data located at address h_data in host memory to device memory
+    cudaMemcpy2DToArray(cuArray, 0, 0, tex->data, spitch, tmp.resolution.x, tmp.resolution.y, cudaMemcpyHostToDevice);
+
+    struct cudaResourceDesc resDesc;
+    memset(&resDesc, 0, sizeof(resDesc));
+    resDesc.resType = cudaResourceTypeArray;
+    resDesc.res.array.array = cuArray;
+
+    // Specify texture object parameters
+    struct cudaTextureDesc texDesc;
+    memset(&texDesc, 0, sizeof(texDesc));
+    texDesc.addressMode[0] = cudaAddressModeWrap;
+    texDesc.addressMode[1] = cudaAddressModeWrap;
+    texDesc.filterMode = cudaFilterModeLinear;
+    texDesc.readMode = cudaReadModeElementType;
+    texDesc.normalizedCoords = 1;
+
+    // Create texture object
+    cudaTextureObject_t texObj = 0;
+    cudaCreateTextureObject(&texObj, &resDesc, &texDesc, NULL);
+    return true;
 }
