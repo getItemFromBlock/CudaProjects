@@ -181,5 +181,6 @@ bool Kernel::LoadTexture(Texture* tex, Texture*& device_tex)
     // Create texture object
     cudaTextureObject_t texObj = 0;
     cudaCreateTextureObject(&texObj, &resDesc, &texDesc, NULL);
+    // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#texture-object-api
     return true;
 }
