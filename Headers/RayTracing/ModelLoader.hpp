@@ -2,10 +2,15 @@
 
 #include <vector>
 
-#include "Mesh.hpp"
+#include "Mesh.cuh"
 #include "Material.hpp"
 
-namespace RayTracing::ModelLoader
+namespace RayTracing
 {
-	bool LoadModel(std::vector<Mesh>& meshes, std::vector<Material>& materials, std::vector<Texture>& textures, const char* path);
+	class Texture;
+
+	namespace ModelLoader
+	{
+		bool LoadModel(std::vector<Mesh>& meshes, std::vector<Material>& materials, std::vector<Texture>& textures, const std::string& path);
+	}
 }

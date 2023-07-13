@@ -1,4 +1,4 @@
-#include "Maths/Maths.hpp"
+#include "Maths/Maths.cuh"
 
 #include <cstdio>
 
@@ -71,19 +71,19 @@ namespace Maths
 
     Mat4::Mat4(f32 diagonal)
     {
-        for (size_t i = 0; i < 4; i++) content[i*5] = diagonal;
+        for (size_t i = 0; i < 4; i++) content[i * 5] = diagonal;
     }
 
     Mat4::Mat4(const Mat4& in)
     {
-        std::copy(in.content, in.content + 16, content);
+        for (size_t i = 0; i < 16; i++) content[i] = in.content[i];
     }
 
     Mat4::Mat4(const Mat3& in)
     {
         for (size_t j = 0; j < 9; j++)
         {
-            content[j + (j/3)] = in.content[j];
+            content[j + (j / 3)] = in.content[j];
         }
         content[15] = 1.0f;
     }
@@ -94,7 +94,7 @@ namespace Maths
         {
             for (size_t i = 0; i < 4; i++)
             {
-                content[j*4+i] = data[j+i*4];
+                content[j * 4 + i] = data[j + i * 4];
             }
         }
     }
@@ -108,9 +108,9 @@ namespace Maths
             {
                 f32 res = 0;
                 for (size_t k = 0; k < 4; k++)
-                    res += content[j+k*4] * in.content[k+i*4];
+                    res += content[j + k * 4] * in.content[k + i * 4];
 
-                out.content[j+i*4] = res;
+                out.content[j + i * 4] = res;
             }
         }
         return out;
@@ -122,7 +122,7 @@ namespace Maths
         for (size_t i = 0; i < 4; i++)
         {
             f32 res = 0;
-            for (size_t k = 0; k < 4; k++) res += content[i+k*4] * in[k];
+            for (size_t k = 0; k < 4; k++) res += content[i + k * 4] * in[k];
             out[i] = res;
         }
         return out;
@@ -187,7 +187,7 @@ namespace Maths
         return CreateTranslationMatrix(position) * rotation.GetRotationMatrix4() * CreateScaleMatrix(scale);
     }
 
-    Mat4 Maths::Mat4::CreateTransformMatrix(const Vec3& position, const Quat& rotation)
+    Mat4 Mat4::CreateTransformMatrix(const Vec3& position, const Quat& rotation)
     {
         return CreateTranslationMatrix(position) * rotation.GetRotationMatrix4();
     }
@@ -203,7 +203,7 @@ namespace Maths
     }
 
     Mat4 Maths::Mat4::CreateRotationMatrix(const Quat& rot)
-    {   
+    {
         f32 xy = rot.v.x * rot.v.y;
         f32 xz = rot.v.x * rot.v.z;
         f32 yz = rot.v.y * rot.v.z;
@@ -214,13 +214,13 @@ namespace Maths
 
         Mat4 out = Mat4(1);
 
-        out.at(0, 0) = 1 - 2 * (rot.v.y * rot.v.y) - 2 * (rot.v.z* rot.v.z);
+        out.at(0, 0) = 1 - 2 * (rot.v.y * rot.v.y) - 2 * (rot.v.z * rot.v.z);
         out.at(1, 0) = 2 * xy - 2 * zw;
         out.at(2, 0) = 2 * xz + 2 * yw;
 
         out.at(0, 1) = 2 * xy + 2 * zw;
         out.at(1, 1) = 1 - 2 * (rot.v.x * rot.v.x) - 2 * (rot.v.z * rot.v.z);
-        out.at(2, 1) = 2 * yz  - 2 * xw;
+        out.at(2, 1) = 2 * yz - 2 * xw;
 
         out.at(0, 2) = 2 * xz - 2 * yw;
         out.at(1, 2) = 2 * yz - 2 * xw;
@@ -310,7 +310,7 @@ namespace Maths
         {
             for (s32 i = 0; i < 4; i++)
             {
-                x[i + j * 4] = content[i+j*4];
+                x[i + j * 4] = content[i + j * 4];
             }
         }
 
@@ -324,7 +324,7 @@ namespace Maths
             printf("[ ");
             for (s32 j = 0; j < 16; j++)
             {
-                printf("%.2f",content[j]);
+                printf("%.2f", content[j]);
                 if (j != 15) printf(", ");
             }
             printf("]\n");
@@ -373,7 +373,7 @@ namespace Maths
                 //  which are not in given row and column
                 if (row != p && col != q)
                 {
-                    mat.content[i+j*4] = content[row+col*4];
+                    mat.content[i + j * 4] = content[row + col * 4];
                     j++;
 
                     // Row is filled, so increase row index and
@@ -400,12 +400,12 @@ namespace Maths
 
         char sign = 1;  // To store sign multiplier
 
-         // Iterate for each element of first row
+        // Iterate for each element of first row
         for (s32 f = 0; f < n; f++)
         {
             // Getting Cofactor of matrix[0][f]
             a = GetCofactor(0, f, (int)n);
-            D += sign * content[f*4] * a.GetDeterminant(n - 1);
+            D += sign * content[f * 4] * a.GetDeterminant(n - 1);
 
             // terms are to be added with alternate sign
             sign = -sign;
@@ -431,7 +431,7 @@ namespace Maths
         // Find Inverse using formula "inverse(A) = adj(A)/det(A)"
         for (s32 i = 0; i < 4; i++)
             for (s32 j = 0; j < 4; j++)
-                inverse.content[i+j*4] = adj.content[i+j*4] / det;
+                inverse.content[i + j * 4] = adj.content[i + j * 4] / det;
 
         return inverse;
     }
@@ -456,7 +456,7 @@ namespace Maths
 
                 // Interchanging rows and columns to get the
                 // transpose of the cofactor matrix
-                adj.content[j+i*4] = (sign) * (temp.GetDeterminant(3));
+                adj.content[j + i * 4] = (sign) * (temp.GetDeterminant(3));
             }
         }
         return adj;
@@ -735,7 +735,7 @@ namespace Maths
 
         char sign = 1;  // To store sign multiplier
 
-         // Iterate for each element of first row
+        // Iterate for each element of first row
         for (s32 f = 0; f < n; f++)
         {
             // Getting Cofactor of matrix[0][f]
@@ -885,7 +885,7 @@ namespace Maths
     {
         f32 DtY = 180.0f / y;
         f32 DtX = 360.0f / x;
-        for (s32 b = 1; b < y+1; b++)
+        for (s32 b = 1; b < y + 1; b++)
         {
             for (s32 a = 0; a < x; a++)
             {
@@ -928,26 +928,26 @@ namespace Maths
             f32 B = 1.0f;
             for (char j = 0; j < 4; j++)
             {
-                V[static_cast<u32>(j)][i%3] = sign/2;
-                V[static_cast<u32>(j)][(i + 1 + (i < 3)) % 3] = A/2;
-                V[static_cast<u32>(j)][(i + 2 - (i < 3)) % 3] = B/2;
+                V[static_cast<u32>(j)][i % 3] = sign / 2;
+                V[static_cast<u32>(j)][(i + 1 + (i < 3)) % 3] = A / 2;
+                V[static_cast<u32>(j)][(i + 2 - (i < 3)) % 3] = B / 2;
                 N[i % 3] = sign;
                 N[(i + 1) % 3] = 0;
                 N[(i + 2) % 3] = 0;
                 UV[static_cast<u32>(j)][i % 2] = A < 0.0f ? 0.0f : 1.0f;
                 UV[static_cast<u32>(j)][(i + 1) % 2] = B * sign < 0.0f ? 0.0f : 1.0f;
                 A = -A;
-                std::swap(A,B);
+                std::swap(A, B);
             }
             for (char j = 0; j < 2; j++)
             {
                 PosOut->push_back(V[0]);
-                PosOut->push_back(V[1+j]);
-                PosOut->push_back(V[2+j]);
+                PosOut->push_back(V[1 + j]);
+                PosOut->push_back(V[2 + j]);
                 for (char k = 0; k < 3; k++) NormOut->push_back(N);
                 UVOut->push_back(UV[0]);
-                UVOut->push_back(UV[1+j]);
-                UVOut->push_back(UV[2+j]);
+                UVOut->push_back(UV[1 + j]);
+                UVOut->push_back(UV[2 + j]);
             }
         }
     }
@@ -956,7 +956,7 @@ namespace Maths
     {
         f32 DtY = 180.0f / y;
         f32 DtX = 360.0f / x;
-        for (s32 b = (reversed ? 1 : y/2 + 1); b < (reversed ? y / 2 : y) + 1; b++)
+        for (s32 b = (reversed ? 1 : y / 2 + 1); b < (reversed ? y / 2 : y) + 1; b++)
         {
             for (s32 a = 0; a < x; a++)
             {
@@ -998,13 +998,13 @@ namespace Maths
                 PosOut->push_back(NormOut->back() + Vec3(0, DtY * (b + 1) - 1, 0));
                 UVOut->push_back(Vec2(0, 1));
                 NormOut->push_back(GetSphericalCoord(DtX * (a + 1), 0));
-                PosOut->push_back(NormOut->back() +Vec3(0, DtY * (b + 1) - 1, 0));
+                PosOut->push_back(NormOut->back() + Vec3(0, DtY * (b + 1) - 1, 0));
                 UVOut->push_back(Vec2(1, 1));
                 NormOut->push_back(GetSphericalCoord(DtX * (a + 1), 0));
                 PosOut->push_back(NormOut->back() + Vec3(0, DtY * b - 1, 0));
                 UVOut->push_back(Vec2(1, 0));
                 NormOut->push_back(GetSphericalCoord(DtX * a, 0));
-                PosOut->push_back(NormOut->back() +Vec3(0, DtY * b - 1, 0));
+                PosOut->push_back(NormOut->back() + Vec3(0, DtY * b - 1, 0));
                 UVOut->push_back(Vec2(0, 0));
                 NormOut->push_back(GetSphericalCoord(DtX * a, 0));
                 PosOut->push_back(NormOut->back() + Vec3(0, DtY * (b + 1) - 1, 0));
@@ -1069,16 +1069,16 @@ namespace Maths
     {
         longitude = ToRadians(longitude);
         latitude = ToRadians(latitude);
-        return Vec3(cosf(longitude)*cosf(latitude),sinf(latitude), sinf(longitude) * cosf(latitude));
+        return Vec3(cosf(longitude) * cosf(latitude), sinf(latitude), sinf(longitude) * cosf(latitude));
     }
 
     bool AABB::IsOnFrustum(const Frustum& camFrustum, const Maths::Mat4& transform) const
     {
         Vec3 globalCenter = (transform * Vec4(center)).GetVector();
         Maths::Mat3 rot = transform;
-        Vec3 right = (rot * Vec3(1,0,0)) * size.x * 2.0f;
-        Vec3 up = (rot * Vec3(0,1,0)) * size.y * 2.0f;
-        Vec3 forward = (rot * Vec3(0,0,1)) * size.z * 2.0f;
+        Vec3 right = (rot * Vec3(1, 0, 0)) * size.x * 2.0f;
+        Vec3 up = (rot * Vec3(0, 1, 0)) * size.y * 2.0f;
+        Vec3 forward = (rot * Vec3(0, 0, 1)) * size.z * 2.0f;
         Vec3 newExtent;
         for (u8 i = 0; i < 3; ++i)
         {

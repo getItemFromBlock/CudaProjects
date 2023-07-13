@@ -7,7 +7,7 @@
 
 #include "RenderThread.hpp"
 #include "EncoderThread.hpp"
-#include "Maths/Maths.hpp"
+#include "Maths/Maths.cuh"
 
 struct Resolution
 {

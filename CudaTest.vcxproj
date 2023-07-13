@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug_V|x64">
+      <Configuration>Debug_V</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
@@ -21,6 +25,12 @@
     <CharacterSet>MultiByte</CharacterSet>
     <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_V|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
@@ -35,11 +45,18 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_V|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(ProjectDir)\Headers;$(ProjectDir)\Includes;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_V|x64'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(ProjectDir)\Headers;$(ProjectDir)\Includes;$(IncludePath)</IncludePath>
   </PropertyGroup>
@@ -61,6 +78,25 @@
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <CodeGeneration>compute_70,sm_70</CodeGeneration>
+      <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
+    </CudaCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_V|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>RAY_TRACING;WIN32;WIN64;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <AdditionalDependencies>cudart_static.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <CudaCompile>
+      <TargetMachinePlatform>64</TargetMachinePlatform>
+      <CodeGeneration>compute_70,sm_70</CodeGeneration>
+      <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -82,20 +118,22 @@
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <CodeGeneration>compute_70,sm_70</CodeGeneration>
+      <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <CudaCompile Include="Sources\Kernel.cu" />
+    <CudaCompile Include="Sources\Maths\Maths.cu" />
+    <CudaCompile Include="Sources\RayTracing\FrameBuffer.cu" />
+    <CudaCompile Include="Sources\RayTracing\Mesh.cu" />
+    <CudaCompile Include="Sources\RayTracing\RayTracing.cu" />
+    <CudaCompile Include="Sources\RayTracing\Texture.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Sources\CudaUtil.cpp" />
     <ClCompile Include="Sources\EncoderThread.cpp" />
     <ClCompile Include="Sources\Main.cpp" />
-    <ClCompile Include="Sources\Maths\Maths.cpp" />
-    <ClCompile Include="Sources\RayTracing\Mesh.cpp" />
     <ClCompile Include="Sources\RayTracing\ModelLoader.cpp" />
-    <ClCompile Include="Sources\RayTracing\RayTracing.cpp" />
-    <ClCompile Include="Sources\RayTracing\Texture.cpp" />
     <ClCompile Include="Sources\WinMain.cpp" />
     <ClCompile Include="Sources\RenderThread.cpp" />
     <ClCompile Include="Sources\Signal.cpp" />
@@ -104,12 +142,13 @@
     <ClInclude Include="Headers\CudaUtil.hpp" />
     <ClInclude Include="Headers\EncoderThread.hpp" />
     <ClInclude Include="Headers\Kernel.cuh" />
-    <ClInclude Include="Headers\Maths\Maths.hpp" />
+    <ClInclude Include="Headers\Maths\Maths.cuh" />
+    <ClInclude Include="Headers\RayTracing\FrameBuffer.cuh" />
     <ClInclude Include="Headers\RayTracing\Material.hpp" />
-    <ClInclude Include="Headers\RayTracing\Mesh.hpp" />
+    <ClInclude Include="Headers\RayTracing\Mesh.cuh" />
     <ClInclude Include="Headers\RayTracing\ModelLoader.hpp" />
-    <ClInclude Include="Headers\RayTracing\RayTracing.hpp" />
-    <ClInclude Include="Headers\RayTracing\Texture.hpp" />
+    <ClInclude Include="Headers\RayTracing\RayTracing.cuh" />
+    <ClInclude Include="Headers\RayTracing\Texture.cuh" />
     <ClInclude Include="Headers\RenderThread.hpp" />
     <ClInclude Include="Headers\Signal.hpp" />
     <ClInclude Include="Headers\Types.hpp" />

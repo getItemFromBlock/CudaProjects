@@ -1,9 +1,9 @@
-#include "RayTracing/Mesh.hpp"
+#include "RayTracing/Mesh.cuh"
 
 using namespace Maths;
 using namespace RayTracing;
 
-HitRecord Mesh::Intersect(Ray r, Vec2 bounds)
+__device__ HitRecord Mesh::Intersect(Ray r, Vec2 bounds)
 {
     HitRecord result;
     if (!HitSphere(r, boundingSphere, bounds)) return result;
@@ -17,14 +17,14 @@ HitRecord Mesh::Intersect(Ray r, Vec2 bounds)
     return result;
 }
 
-void Mesh::ApplyTransform(const Mat4& transform, u32 index)
+__device__ void Mesh::ApplyTransform(const Mat4& transform, u32 index)
 {
     transformedVertices[index].pos = (transform * Vec4(sourceVertices[index].pos, 1)).GetVector();
     transformedVertices[index].normal = (transform * Vec4(sourceVertices[index].pos, 0)).GetVector();
     transformedVertices[index].uv = sourceVertices[index].uv;
 }
 
-u32 Mesh::GetIndiceCount()
+__host__ __device__ u32 Mesh::GetIndiceCount()
 {
     return indiceCount;
 }

@@ -1,4 +1,4 @@
-#include "RayTracing/RayTracing.hpp"
+#include "RayTracing/RayTracing.cuh"
 
 using namespace Maths;
 

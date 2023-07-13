@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Maths/Maths.hpp"
-#include "Texture.hpp"
+#include "Maths/Maths.cuh"
+#include "Texture.cuh"
 
 namespace RayTracing
 {

@@ -45,8 +45,8 @@ namespace Maths
         CUDA_FUNCTION inline IVec2(const IVec2& in) : x(in.x), y(in.y) {}
         CUDA_FUNCTION inline IVec2(const Vec2 in);
         CUDA_FUNCTION inline IVec2(const s32 a, const s32 b) : x(a), y(b) {}
-		
-		void print() const;
+
+        void print() const;
         const std::string toString() const;
 
         CUDA_FUNCTION inline s32 Dot(IVec2 a) const;
@@ -72,8 +72,8 @@ namespace Maths
         CUDA_FUNCTION inline IVec2& operator-=(const IVec2 a);
 
         CUDA_FUNCTION inline IVec2& operator-=(const s32 a);
-		
-		CUDA_FUNCTION inline IVec2 operator-() const;
+
+        CUDA_FUNCTION inline IVec2 operator-() const;
 
         // Return the result of the aritmetic multiplication of 'a' and 'b'
         CUDA_FUNCTION inline IVec2 operator*(const IVec2 a) const;
@@ -105,13 +105,13 @@ namespace Maths
         // Return a new Vec2 initialised with 'a' and 'b'
         CUDA_FUNCTION inline Vec2(f32 a, f32 b) : x(a), y(b) {}
 
-        CUDA_FUNCTION inline Vec2(f32 value) : Vec2(value,value) {}
+        CUDA_FUNCTION inline Vec2(f32 value) : Vec2(value, value) {}
 
         // Return a new Vec2 initialised with 'in'
         CUDA_FUNCTION inline Vec2(const Vec2& in) : x(in.x), y(in.y) {}
         CUDA_FUNCTION inline Vec2(const IVec2 in) : x((f32)in.x), y((f32)in.y) {}
-		
-		void print() const;
+
+        void print() const;
         const std::string toString() const;
 
         // Return a new Vec2 equivalent to Vec(1,0) rotated by 'angle' (in radians)
@@ -176,8 +176,8 @@ namespace Maths
 
         // Get the angle defined by this vector, in radians
         CUDA_FUNCTION inline f32 GetAngle() const;
-		
-		CUDA_FUNCTION inline bool IsNearlyEqual(Vec2 a, f32 prec = 1e-5f);
+
+        CUDA_FUNCTION inline bool IsNearlyEqual(Vec2 a, f32 prec = 1e-5f);
 
 #ifdef IMGUI_API
         inline Vec2(const ImVec2& in) : x(in.x), y(in.y) {}
@@ -240,8 +240,8 @@ namespace Maths
 
         CUDA_FUNCTION inline bool operator==(const IVec3& b) const;
         CUDA_FUNCTION inline bool operator!=(const IVec3& b) const;
-		
-		CUDA_FUNCTION inline const s32& operator[](const size_t a) const;
+
+        CUDA_FUNCTION inline const s32& operator[](const size_t a) const;
 
         CUDA_FUNCTION inline s32& operator[](const size_t a);
     };
@@ -265,7 +265,7 @@ namespace Maths
         CUDA_FUNCTION inline Vec3(const IVec3& in) : x((f32)in.x), y((f32)in.y), z((f32)in.z) {}
 
         void Print() const;
-		const std::string ToString() const;
+        const std::string ToString() const;
 
         CUDA_FUNCTION inline f32 Dot() const;
 
@@ -385,7 +385,7 @@ namespace Maths
 
         // Print the Vec4
         void print() const;
-		const std::string toString() const;
+        const std::string toString() const;
 
         // Return the Vec3 of Vec4
         CUDA_FUNCTION inline Vec3 GetVector() const;
@@ -445,8 +445,8 @@ namespace Maths
 
         // return true if 'a' converted to s32 is equivalent to 'in' converted to s32
         CUDA_FUNCTION inline bool IsIntEquivalent(Vec4 a) const;
-		
-		CUDA_FUNCTION inline bool IsNearlyEqual(Vec4 a, f32 prec = 1e-5f);
+
+        CUDA_FUNCTION inline bool IsNearlyEqual(Vec4 a, f32 prec = 1e-5f);
 
         CUDA_FUNCTION inline f32 GetSignedDistanceToPlane(const Vec3& point) const;
 
@@ -457,7 +457,7 @@ namespace Maths
 #endif
 
 #ifdef JOLT_API
-        inline Vec4(const JPH::Vec4Arg& in) : x(in.GetX()), y(in.GetY()), z(in.GetZ()), w(in.GetW()){}
+        inline Vec4(const JPH::Vec4Arg& in) : x(in.GetX()), y(in.GetY()), z(in.GetZ()), w(in.GetW()) {}
 
         inline operator JPH::Vec4Arg() const { return JPH::Vec4Arg(x, y, z, w); }
 #endif
@@ -540,14 +540,14 @@ namespace Maths
         CUDA_FUNCTION Mat4 TransposeMatrix();
 
         CUDA_FUNCTION inline f32& operator[](const size_t a);
-		
-		CUDA_FUNCTION inline const f32& operator[](const size_t a) const;
+
+        CUDA_FUNCTION inline const f32& operator[](const size_t a) const;
 
         CUDA_FUNCTION inline f32& at(const u8 x, const u8 y);
         CUDA_FUNCTION inline const f32& at(const u8 x, const u8 y) const;
 
         void PrintMatrix(bool raw = false);
-		const std::string toString() const;
+        const std::string toString() const;
 
         CUDA_FUNCTION Mat4 CreateInverseMatrix() const;
 
@@ -631,7 +631,7 @@ namespace Maths
         // Recursive function for finding determinant of matrix. n is current dimension of 'in'.
         CUDA_FUNCTION f32 GetDeterminant(f32 n);
     };
-    
+
     class NAT_API Quat
     {
     public:
@@ -725,7 +725,7 @@ namespace Maths
         CUDA_FUNCTION AABB() {}
         CUDA_FUNCTION AABB(Vec3 position, Vec3 extent) : center(position), size(extent) {}
         CUDA_FUNCTION ~AABB() {}
-        
+
         Vec3 center;
         Vec3 size;
 

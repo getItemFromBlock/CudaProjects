@@ -1,7 +1,13 @@
 #pragma once
 
 #include "cuda_runtime.h"
-#include "Types.hpp"
+#include "Maths/Maths.cuh"
+#include "RayTracing/RayTracing.cuh"
+
+namespace RayTracing
+{
+	class Texture;
+}
 
 namespace CudaUtil
 {
@@ -25,6 +31,8 @@ namespace CudaUtil
 	s32 GetDevicesCount();
 	void UseDevice(s32 deviceID);
 	void PrintDevicesName();
+	bool LoadTexture(RayTracing::Texture& tex, const std::string& path);
+	bool UnloadTexture(RayTracing::Texture& tex);
 
 	template<typename T>
 	T* Allocate(u64 count)

@@ -1,6 +1,6 @@
 #include <cstdio>
 
-#include "Maths.hpp"
+#include "Maths.cuh"
 
 #include <assert.h>
 #ifdef _WIN32
@@ -1014,7 +1014,7 @@ namespace Maths
         return Quat(v * b, a).Normalize();
     }
 
-    inline Quat Maths::Quat::Inverse() const
+    inline Quat Quat::Inverse() const
     {
         if (Dot() < 1e-5f) return *this;
         return Conjugate()/Length();
@@ -1278,7 +1278,7 @@ namespace Maths
 
     inline Vec3 Util::MinV(Vec3 a, Vec3 b)
     {
-        Maths::Vec3 result;
+        Vec3 result;
         for (u8 i = 0; i < 3; ++i)
         {
             result[i] = MinF(a[i], b[i]);
@@ -1288,7 +1288,7 @@ namespace Maths
 
     inline Vec3 Util::MaxV(Vec3 a, Vec3 b)
     {
-        Maths::Vec3 result;
+        Vec3 result;
         for (u8 i = 0; i < 3; ++i)
         {
             result[i] = MaxF(a[i], b[i]);

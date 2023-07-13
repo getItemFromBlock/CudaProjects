@@ -1,7 +1,16 @@
 #include "CudaUtil.hpp"
+
 #include <iostream>
 #include <assert.h>
 #include <vector>
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
+#include "RayTracing/Texture.cuh"
+
+using namespace Maths;
+using namespace RayTracing;
 
 void CudaUtil::ResetDevice()
 {
@@ -97,4 +106,48 @@ s32 CudaUtil::GetDevicesCount()
     s32 count = 0;
     CheckError(cudaGetDeviceCount(&count));
     return count;
+}
+
+bool CudaUtil::LoadTexture(Texture& tex, const std::string& path)
+{
+    s32 comp;
+    f32* data = stbi_loadf(path.c_str(), &tex.resolution.x, &tex.resolution.y, &comp, 4);
+    if (!data)
+    {
+        std::cerr << "Unable to load texture: " << path << " : " << stbi_failure_reason() << std::endl;
+    }
+    if (tex.resolution.x <= 0 || tex.resolution.y <= 0 || !data) return false;
+    const s32 fsize = sizeof(f32) * 8;
+    cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(fsize, fsize, fsize, fsize, cudaChannelFormatKindFloat);
+    CheckError(cudaMallocArray(&tex.device_data, &channelDesc, tex.resolution.x, tex.resolution.y));
+    const size_t spitch = tex.resolution.x * sizeof(Vec4);
+    // Copy data located at address h_data in host memory to device memory
+    CheckError(cudaMemcpy2DToArray(tex.device_data, 0, 0, data, spitch, tex.resolution.x, tex.resolution.y, cudaMemcpyHostToDevice));
+    stbi_image_free(data);
+    // Dont need this anymore, and cudaMemcpy is not async
+    struct cudaResourceDesc resDesc;
+    memset(&resDesc, 0, sizeof(resDesc));
+    resDesc.resType = cudaResourceTypeArray;
+    resDesc.res.array.array = tex.device_data;
+
+    // Specify texture object parameters
+    struct cudaTextureDesc texDesc;
+    memset(&texDesc, 0, sizeof(texDesc));
+    texDesc.addressMode[0] = cudaAddressModeWrap;
+    texDesc.addressMode[1] = cudaAddressModeWrap;
+    texDesc.filterMode = cudaFilterModeLinear;
+    texDesc.readMode = cudaReadModeElementType;
+    texDesc.normalizedCoords = 1;
+
+    // Create texture object
+    CheckError(cudaCreateTextureObject(&tex.device_tex, &resDesc, &texDesc, NULL));
+    return true;
+}
+
+bool CudaUtil::UnloadTexture(RayTracing::Texture& tex)
+{
+    if (tex.resolution.x <= 0 || tex.resolution.y <= 0) return false;
+    CheckError(cudaDestroyTextureObject(tex.device_tex));
+    CheckError(cudaFreeArray(tex.device_data));
+    return true;
 }

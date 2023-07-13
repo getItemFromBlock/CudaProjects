@@ -13,7 +13,7 @@
 #include "Types.hpp"
 #include "Signal.hpp"
 #include "Kernel.cuh"
-#include "Maths/Maths.hpp"
+#include "Maths/Maths.cuh"
 
 #define LENGTH 34.90658503988659
 /*

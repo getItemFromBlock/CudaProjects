@@ -143,7 +143,13 @@ void Kernel::RunKernels(u32* img, f64 iTime)
     u64 count = 1llu * res.x * res.y;
     u64 size = sizeof(u32) * count;
     s32 M = CudaUtil::GetMaxThreads(deviceID);
+
+#ifdef RAY_TRACING
+
+#else
     fractalKernel<<<((u32)count + M - 1) / M, M>>>(dev_img, res, iTime);
+#endif
+
 
     CudaUtil::CheckError(cudaGetLastError(), "addKernel launch failed: %s");
     CudaUtil::SynchronizeDevice();
@@ -151,36 +157,3 @@ void Kernel::RunKernels(u32* img, f64 iTime)
     CudaUtil::Copy(dev_img, img, size, CudaUtil::CopyType::DToH);
 }
 
-bool Kernel::LoadTexture(Texture* tex, Texture*& device_tex)
-{
-    if (!tex || tex->resolution.x <= 0 || tex->resolution.y <= 0 || !tex->data) return false;
-    device_tex = CudaUtil::Allocate<Texture>(1);
-    Texture tmp;
-    tmp.resolution = tex->resolution;
-    cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(8, 8, 8, 8, cudaChannelFormatKindUnsignedNormalized8X4);
-    cudaArray_t cuArray;
-    cudaMallocArray(&cuArray, &channelDesc, tmp.resolution.x, tmp.resolution.y);
-    const size_t spitch = tmp.resolution.x * 4;
-    // Copy data located at address h_data in host memory to device memory
-    cudaMemcpy2DToArray(cuArray, 0, 0, tex->data, spitch, tmp.resolution.x, tmp.resolution.y, cudaMemcpyHostToDevice);
-
-    struct cudaResourceDesc resDesc;
-    memset(&resDesc, 0, sizeof(resDesc));
-    resDesc.resType = cudaResourceTypeArray;
-    resDesc.res.array.array = cuArray;
-
-    // Specify texture object parameters
-    struct cudaTextureDesc texDesc;
-    memset(&texDesc, 0, sizeof(texDesc));
-    texDesc.addressMode[0] = cudaAddressModeWrap;
-    texDesc.addressMode[1] = cudaAddressModeWrap;
-    texDesc.filterMode = cudaFilterModeLinear;
-    texDesc.readMode = cudaReadModeElementType;
-    texDesc.normalizedCoords = 1;
-
-    // Create texture object
-    cudaTextureObject_t texObj = 0;
-    cudaCreateTextureObject(&texObj, &resDesc, &texDesc, NULL);
-    // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#texture-object-api
-    return true;
-}

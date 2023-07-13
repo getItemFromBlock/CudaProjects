@@ -1,6 +1,8 @@
 #pragma once
 
-#include "Maths/Maths.hpp"
+#include "cuda_runtime.h"
+
+#include "Maths/Maths.cuh"
 
 namespace RayTracing
 {
@@ -31,7 +33,7 @@ namespace RayTracing
         f32 radius = 0;
     };
 
-    bool HitSphere(Ray r, Sphere sp, Maths::Vec2 bounds);
+    __host__ __device__ bool HitSphere(Ray r, Sphere sp, Maths::Vec2 bounds);
 
-    HitRecord HitTriangle(Ray r, Vertice* vertices, Maths::Vec2 bounds);
+    __host__ __device__ HitRecord HitTriangle(Ray r, Vertice* vertices, Maths::Vec2 bounds);
 }
