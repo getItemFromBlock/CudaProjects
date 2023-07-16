@@ -99,6 +99,7 @@ RayTracing::BVec2 lessThan(Vec2 a, Vec2 b)
     return res;
 }
 
+// https://jcgt.org/published/0007/03/04/paper-lowres.pdf
 bool RayTracing::HitBox(Ray ray, const Box& box, Vec2 bounds)
 {
     ray.pos = box.rotation * (ray.pos - box.center);
