@@ -7,6 +7,7 @@
 namespace RayTracing
 {
 	class Texture;
+	class FrameBuffer;
 }
 
 namespace CudaUtil
@@ -26,13 +27,18 @@ namespace CudaUtil
 	void SynchronizeDevice();
 	void* Allocate(u64 size);
 	void Free(void* ptr);
+	void FreeArray(cudaArray_t ptr);
 	void Copy(const void* source, void* dest, u64 size, CopyType kind);
+	void CopyFrameBuffer(const RayTracing::FrameBuffer& source, u32* dest, CopyType kind);
+	void CopyFrameBuffer(const u32* source, RayTracing::FrameBuffer& dest, CopyType kind);
 	s32 GetMaxThreads(s32 deviceID);
 	s32 GetDevicesCount();
 	void UseDevice(s32 deviceID);
 	void PrintDevicesName();
 	bool LoadTexture(RayTracing::Texture& tex, const std::string& path);
-	bool UnloadTexture(RayTracing::Texture& tex);
+	bool UnloadTexture(const RayTracing::Texture& tex);
+	bool CreateFrameBuffer(RayTracing::FrameBuffer& tex, Maths::IVec2 res);
+	bool UnloadFrameBuffer(const RayTracing::FrameBuffer& tex);
 
 	template<typename T>
 	T* Allocate(u64 count)

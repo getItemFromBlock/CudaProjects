@@ -14,9 +14,42 @@
 using namespace Maths;
 using namespace RayTracing;
 
+void LoadTexture(const std::string& tex, std::vector<TextureAlias>& texNames, std::vector<Texture>& textures, u32& dest, const std::string& file)
+{
+    if (tex.empty()) return;
+    std::filesystem::path texture_filename = tex;
+    if (!std::filesystem::exists(texture_filename))
+    {
+        // Append base dir.
+        texture_filename = std::filesystem::path(file).parent_path().append(tex);
+        if (!std::filesystem::exists(texture_filename))
+        {
+            std::cerr << "Unable to find file: " << tex << std::endl;
+            return;
+        }
+    }
+    std::string correct_path = texture_filename.string();
+    for (auto& str : texNames)
+    {
+        if (str.path == correct_path)
+        {
+            dest = str.tex;
+            return;
+        }
+    }
+
+    dest = static_cast<u32>(textures.size());
+    textures.push_back(Texture());
+    if (!CudaUtil::LoadTexture(textures.back(), correct_path)) return;
+
+    texNames.push_back(TextureAlias());
+    texNames.back().path = correct_path;
+    texNames.back().tex = dest;
+}
+
 void LoadMaterials(std::vector<Material>& materials, std::vector<Texture>& textures, std::vector<tinyobj::material_t> matsIn, const std::string& file)
 {
-    std::vector<std::string> texNames;
+    std::vector<TextureAlias> texNames;
 
     for (u64 m = 0; m < matsIn.size(); ++m)
     {
@@ -26,34 +59,9 @@ void LoadMaterials(std::vector<Material>& materials, std::vector<Texture>& textu
         materials.back().diffuseColor = Vec3(mp->diffuse[0], mp->diffuse[1], mp->diffuse[2]);
         materials.back().specularColor = Vec3(mp->specular[0], mp->specular[1], mp->specular[2]);
 
-        if (mp->diffuse_texname.empty()) continue;
-        bool found = false;
-        for (auto& str : texNames)
-        {
-            if (str == mp->diffuse_texname)
-            {
-                found = true;
-                break;
-            }
-        }
-        if (found) continue;
-
-        std::filesystem::path texture_filename = mp->diffuse_texname;
-        if (!std::filesystem::exists(texture_filename))
-        {
-            // Append base dir.
-            texture_filename = std::filesystem::path(file).parent_path().append(mp->diffuse_texname);
-            if (!std::filesystem::exists(texture_filename))
-            {
-                std::cerr << "Unable to find file: " << mp->diffuse_texname << std::endl;
-                continue;
-            }
-        }
-        Texture tex;
-        if (!CudaUtil::LoadTexture(tex, texture_filename.string())) continue;
-
-        textures.push_back(tex);
-        texNames.push_back(mp->diffuse_texname);
+        LoadTexture(mp->diffuse_texname, texNames, textures, materials.back().diffuseTex, file);
+        LoadTexture(mp->ambient_texname, texNames, textures, materials.back().ambientTex, file);
+        LoadTexture(mp->specular_texname, texNames, textures, materials.back().specularTex, file);
     }
 }
 
@@ -83,7 +91,7 @@ struct MeshData
     u32 matIndex = 0;
 };
 
-void LoadMeshes(std::vector<Mesh>& meshes, std::vector<tinyobj::shape_t> meshesIn, const tinyobj::attrib_t& attributes)
+void LoadMeshes(std::vector<Mesh>& meshes, u64 matDelta, std::vector<tinyobj::shape_t> meshesIn, const tinyobj::attrib_t& attributes)
 {
     std::vector<MeshData> meshesD;
     for (u64 m = 0; m < meshesIn.size(); ++m)
@@ -125,16 +133,17 @@ void LoadMeshes(std::vector<Mesh>& meshes, std::vector<tinyobj::shape_t> meshesI
                 }
                 else
                 {
+                    data.indices.push_back(static_cast<u32>(data.vertices.size()));
                     data.vertices.push_back(Vertice());
                     data.vertices.back().pos = Maths::Vec3(attributes.vertices[vert.x * 3], attributes.vertices[vert.x * 3 + 1], attributes.vertices[vert.x * 3 + 2]);
                     data.vertices.back().normal = Maths::Vec3(attributes.normals[vert.y * 3], attributes.normals[vert.y * 3 + 1], attributes.normals[vert.y * 3 + 2]);
-                    data.vertices.back().uv = Maths::Vec2(attributes.texcoords[vert.z * 2], attributes.vertices[vert.z * 2 + 1]);
-                    data.indices.push_back(static_cast<u32>(data.vertices.size()));
+                    data.vertices.back().uv = Maths::Vec2(attributes.texcoords[vert.z * 2], attributes.texcoords[vert.z * 2 + 1]);
                     for (u8 h = 0; h < 3; ++h)
                     {
-                        data.min[h] = Util::MinF(data.min[i], data.vertices.back().pos[h]);
-                        data.max[h] = Util::MaxF(data.min[i], data.vertices.back().pos[h]);
+                        data.min[h] = Util::MinF(data.min[h], data.vertices.back().pos[h]);
+                        data.max[h] = Util::MaxF(data.max[h], data.vertices.back().pos[h]);
                     }
+                    data.bufferedVertices[vert] = data.indices.back();
                 }
             }
         }
@@ -144,7 +153,7 @@ void LoadMeshes(std::vector<Mesh>& meshes, std::vector<tinyobj::shape_t> meshesI
         if (meshesD[i].indices.empty()) continue;
         meshes.push_back(Mesh());
         auto& mesh = meshes.back();
-        mesh.matIndex = meshesD[i].matIndex;
+        mesh.matIndex = static_cast<u32>(matDelta + meshesD[i].matIndex);
         mesh.verticeCount = static_cast<u32>(meshesD[i].vertices.size());
         mesh.indiceCount = static_cast<u32>(meshesD[i].indices.size());
         mesh.indices = CudaUtil::Allocate<u32>(mesh.indiceCount);
@@ -152,8 +161,9 @@ void LoadMeshes(std::vector<Mesh>& meshes, std::vector<tinyobj::shape_t> meshesI
         mesh.transformedVertices = CudaUtil::Allocate<Vertice>(mesh.verticeCount);
         CudaUtil::Copy(meshesD[i].indices.data(), mesh.indices, mesh.indiceCount * sizeof(u32), CudaUtil::CopyType::HToD);
         CudaUtil::Copy(meshesD[i].vertices.data(), mesh.sourceVertices, mesh.verticeCount * sizeof(Vertice), CudaUtil::CopyType::HToD);
-        mesh.boundingSphere.pos = (meshesD[i].min + meshesD[i].max) / 2;
-        mesh.boundingSphere.radius = (meshesD[i].max - meshesD[i].min).Length() / 2;
+        mesh.sourceSphere.pos = (meshesD[i].min + meshesD[i].max) / 2;
+        mesh.sourceSphere.radius = (meshesD[i].max - meshesD[i].min).Length() / 2;
+        mesh.sourceSphere.radius = mesh.sourceSphere.radius * mesh.sourceSphere.radius;
     }
 }
 
@@ -164,7 +174,8 @@ bool RayTracing::ModelLoader::LoadModel(std::vector<Mesh>& meshes, std::vector<M
 	std::vector<tinyobj::material_t> mats;
 	std::string warn;
 	std::string err;
-	bool ret = tinyobj::LoadObj(&attributes, &shapes, &mats, &warn, &err, path.c_str());
+    const std::string parent = std::filesystem::path(path).parent_path().string();
+	bool ret = tinyobj::LoadObj(&attributes, &shapes, &mats, &warn, &err, path.c_str(), parent.c_str());
 	if (!warn.empty())
 	{
 		std::cout << "WARN: " << warn << std::endl;
@@ -180,8 +191,7 @@ bool RayTracing::ModelLoader::LoadModel(std::vector<Mesh>& meshes, std::vector<M
 	}
 	mats.push_back(tinyobj::material_t());
 	u64 matdelta = materials.size();
-	u64 meshDelta = meshes.size();
     LoadMaterials(materials, textures, mats, path);
-    LoadMeshes(meshes, shapes, attributes);
+    LoadMeshes(meshes, matdelta, shapes, attributes);
 	return true;
 }

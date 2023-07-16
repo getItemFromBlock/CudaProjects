@@ -76,17 +76,13 @@ __device__ u32 mandelbrot(f64 x0, f64 y0)
     return iteration;
 }
 
-__global__ void rayTracingKernel()
-{
-
-}
-
-__global__ void fractalKernel(u32* a, IVec2 res, f64 iTime)
+__global__ void fractalKernel(FrameBuffer fb, f64 iTime)
 {
     u64 index = 1llu * threadIdx.x + blockIdx.x * blockDim.x;
-    if (index > 1llu * res.x * res.y) return;
-    f64 py = ((index / res.x) * 2.0 - res.y) / res.y;
-    f64 px = ((index % res.x) * 2.0 - res.x) / res.y;
+    if (index >= 1llu * fb.resolution.x * fb.resolution.y) return;
+    Maths::IVec2 pixel = Maths::IVec2(index % fb.resolution.x, index / fb.resolution.x);
+    f64 py = (pixel.y * 2.0 - fb.resolution.y) / fb.resolution.y;
+    f64 px = (pixel.x * 2.0 - fb.resolution.x) / fb.resolution.y;
 
     f64 tz = 0.5 - 0.5 * cos(0.09 * iTime);
     f64 zoo = pow(0.5, 50.0 * tz);
@@ -96,20 +92,63 @@ __global__ void fractalKernel(u32* a, IVec2 res, f64 iTime)
     u32 val = mandelbrot(x,y);
     if (val == MAX_ITER)
     {
-        a[index] = 0xff000000;
+        fb.Write(pixel, Maths::Vec3());
         return;
     }
     f32 norm = val * 1.0f / MAX_ITER;
     Vec3 rgb;
     norm = powf(norm, 0.3f);
     HSVtoRGB(rgb, Vec3(norm*360, 1, 1));
-    u32 col = 0xff000000 | static_cast<u32>(rgb.x * 255) << 16 | static_cast<u32>(rgb.y * 255) << 8 | static_cast<u32>(rgb.z * 255);
-    a[index] = col;
+    fb.Write(pixel, rgb);
+}
+
+__global__ void rayTracingKernel(FrameBuffer fb, Mesh* meshes, Material* mats, Texture* texs, Vec3 pos, Vec3 front, Vec3 up, u32 meshCount)
+{
+    u64 index = 1llu * threadIdx.x + blockIdx.x * blockDim.x;
+    if (index >= 1llu * fb.resolution.x * fb.resolution.y) return;
+    Maths::IVec2 pixel = Maths::IVec2(index % fb.resolution.x, index / fb.resolution.x);
+    Maths::Vec2 coord = (Vec2(pixel) * 2 - fb.resolution) / fb.resolution.y;
+    Vec3 right = front.Cross(up);
+    Ray r = Ray(pos, right * coord.x + up * coord.y + front);
+    f32 far = 100000.0f;
+    Material* mat = nullptr;
+    HitRecord result;
+    for (u32 i = 0; i < meshCount; ++i)
+    {
+        HitRecord hit = meshes[i].Intersect(r, Maths::Vec2(0.00001f, far));
+        if (hit.dist < 0) continue;
+        far = hit.dist;
+        mat = mats + meshes[i].matIndex;
+        result = hit;
+    }
+    if (!mat && HitSphere(r, meshes[0].transformedSphere, Vec2(0, 1000)))
+    {
+        fb.Write(pixel, Vec3(1, 0, 0));
+        return;
+    }
+    fb.Write(pixel, mat ? (mat->diffuseTex != ~0 ? texs[mat->diffuseTex].Sample(result.uv) : mat->diffuseColor) : Vec3());
+}
+
+__global__ void verticeKernel(Mesh* meshes, u32 meshIndex, Mat4 mvp)
+{
+    u64 index = 1llu * threadIdx.x + blockIdx.x * blockDim.x;
+    Mesh* mesh = meshes + meshIndex;
+    if (index < mesh->verticeCount)
+    {
+        mesh->transformedVertices[index].pos = (mvp * Vec4(mesh->sourceVertices[index].pos, 1)).GetVector();
+        mesh->transformedVertices[index].normal = (mvp * Vec4(mesh->sourceVertices[index].normal, 0)).GetVector();
+        mesh->transformedVertices[index].uv = mesh->sourceVertices[index].uv;
+    }
+    else if (index == mesh->verticeCount)
+    {
+        mesh->transformedSphere.pos = (mvp * Vec4(mesh->sourceSphere.pos, 1)).GetVector();
+        Vec3 scale = mvp.GetScaleFromTranslation() * mesh->sourceSphere.radius;
+        mesh->transformedSphere.radius = Util::MaxF(Util::MaxF(scale.x, scale.y), scale.z);
+    }
 }
 
 void Kernel::InitKernels(IVec2 resIn, s32 id)
 {
-    res = resIn;
     if (id < 0)
     {
         deviceID = CudaUtil::SelectDevice();
@@ -119,41 +158,103 @@ void Kernel::InitKernels(IVec2 resIn, s32 id)
         deviceID = id;
         CudaUtil::UseDevice(id);
     }
-    dev_img = CudaUtil::Allocate<u32>(1llu*res.x*res.y);
+    CudaUtil::CreateFrameBuffer(fb, resIn);
 }
 
 void Kernel::Resize(IVec2 resIn)
 {
-    if (resIn.x * resIn.y > res.x * res.y) // no need to resize the buffer down, it is already large enouth to hold the new image
-    {
-        CudaUtil::Free(dev_img);
-        dev_img = CudaUtil::Allocate<u32>(1llu * resIn.x * resIn.y);
-    }
-    res = resIn;
+    CudaUtil::UnloadFrameBuffer(fb);
+    CudaUtil::CreateFrameBuffer(fb, resIn);
 }
 
 void Kernel::ClearKernels()
 {
-    CudaUtil::Free(dev_img);
+    CudaUtil::UnloadFrameBuffer(fb);
     CudaUtil::ResetDevice();
 }
 
 void Kernel::RunKernels(u32* img, f64 iTime)
 {
-    u64 count = 1llu * res.x * res.y;
-    u64 size = sizeof(u32) * count;
+    u32 count = fb.resolution.x * fb.resolution.y;
     s32 M = CudaUtil::GetMaxThreads(deviceID);
 
-#ifdef RAY_TRACING
+    fractalKernel<<<(count + M - 1) / M, M>>>(fb, iTime);
 
-#else
-    fractalKernel<<<((u32)count + M - 1) / M, M>>>(dev_img, res, iTime);
-#endif
-
-
-    CudaUtil::CheckError(cudaGetLastError(), "addKernel launch failed: %s");
+    CudaUtil::CheckError(cudaGetLastError(), "fractalKernel launch failed: %s");
     CudaUtil::SynchronizeDevice();
 
-    CudaUtil::Copy(dev_img, img, size, CudaUtil::CopyType::DToH);
+    CudaUtil::CopyFrameBuffer(fb, img, CudaUtil::CopyType::DToH);
 }
 
+void Kernel::UpdateMeshVertices(Mesh* mesh, u32 index, const Mat4& mvp)
+{
+    u32 count = mesh->verticeCount + 1;
+    s32 M = CudaUtil::GetMaxThreads(deviceID);
+    verticeKernel<<<(count + M - 1) / M, M>>>(device_meshes, index, mvp);
+    CudaUtil::CheckError(cudaGetLastError(), "verticeKernel launch failed: %s");
+}
+
+void Kernel::RenderMeshes(u32* img, u32 meshCount, Vec3 pos, Vec3 front, Vec3 up)
+{
+    u32 count = fb.resolution.x * fb.resolution.y;
+    s32 M = CudaUtil::GetMaxThreads(deviceID);
+    M /= 2;
+
+    rayTracingKernel<<<(count + M - 1) / M, M>>>(fb, device_meshes, device_materials, device_textures, pos, front, up, meshCount);
+
+    CudaUtil::CheckError(cudaGetLastError(), "rayTracingKernel launch failed: %s");
+    CudaUtil::SynchronizeDevice();
+
+    CudaUtil::CopyFrameBuffer(fb, img, CudaUtil::CopyType::DToH);
+}
+
+void Kernel::UnloadMeshes(const std::vector<Mesh>& meshes)
+{
+    CudaUtil::Free(device_meshes);
+    device_meshes = nullptr;
+    for (auto& mesh : meshes)
+    {
+        CudaUtil::Free(mesh.indices);
+        CudaUtil::Free(mesh.sourceVertices);
+        CudaUtil::Free(mesh.transformedVertices);
+    }
+}
+
+void Kernel::UnloadMaterials()
+{
+    CudaUtil::Free(device_materials);
+    device_materials = nullptr;
+}
+
+void Kernel::UnloadTextures(const std::vector<Texture>& textures)
+{
+    CudaUtil::Free(device_textures);
+    device_textures = nullptr;
+    for (auto& tex : textures)
+    {
+        CudaUtil::UnloadTexture(tex);
+    }
+}
+
+void Kernel::Synchronize()
+{
+    CudaUtil::SynchronizeDevice();
+}
+
+void Kernel::LoadMeshes(const std::vector<Mesh> meshes)
+{
+    device_meshes = CudaUtil::Allocate<Mesh>(meshes.size());
+    CudaUtil::Copy(meshes.data(), device_meshes, sizeof(Mesh) * meshes.size(), CudaUtil::CopyType::HToD);
+}
+
+void Kernel::LoadTextures(const std::vector<Texture> textures)
+{
+    device_textures = CudaUtil::Allocate<Texture>(textures.size());
+    CudaUtil::Copy(textures.data(), device_textures, sizeof(Texture) * textures.size(), CudaUtil::CopyType::HToD);
+}
+
+void Kernel::LoadMaterials(const std::vector<Material> materials)
+{
+    device_materials = CudaUtil::Allocate<Material>(materials.size());
+    CudaUtil::Copy(materials.data(), device_materials, sizeof(Material) * materials.size(), CudaUtil::CopyType::HToD);
+}

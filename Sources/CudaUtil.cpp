@@ -8,6 +8,7 @@
 #include "stb_image.h"
 
 #include "RayTracing/Texture.cuh"
+#include "RayTracing/FrameBuffer.cuh"
 
 using namespace Maths;
 using namespace RayTracing;
@@ -68,7 +69,9 @@ void CudaUtil::CheckError(cudaError_t val, const char* text)
 {
 	if (val != cudaSuccess)
 	{
+        std::string err = cudaGetErrorString(val);
 		std::printf(text, cudaGetErrorString(val));
+        assert(0);
 	}
 }
 
@@ -89,9 +92,26 @@ void CudaUtil::Free(void* ptr)
 	CheckError(cudaFree(ptr), "cudaFree failed: %s");
 }
 
+void CudaUtil::FreeArray(cudaArray_t ptr)
+{
+    CheckError(cudaFreeArray(ptr), "cudaFreeArray failed: %s");
+}
+
 void CudaUtil::Copy(const void* source, void* dest, u64 size, CopyType kind)
 {
 	CheckError(cudaMemcpy(dest, source, size, static_cast<cudaMemcpyKind>(kind)), "cudaMemcpy failed: %s");
+}
+
+void CudaUtil::CopyFrameBuffer(const FrameBuffer& source, u32* dest, CopyType kind)
+{
+    const u64 spitch = sizeof(u8) * 4 * source.resolution.x;
+    CheckError(cudaMemcpy2DFromArray(dest, spitch, source.device_data, 0, 0, spitch, source.resolution.y, static_cast<cudaMemcpyKind>(kind)));
+}
+
+void CudaUtil::CopyFrameBuffer(const u32* source, RayTracing::FrameBuffer& dest, CopyType kind)
+{
+    const u64 spitch = sizeof(u8) * 4 * dest.resolution.x;
+    CheckError(cudaMemcpy2DToArray(dest.device_data, 0, 0, source, spitch, spitch, dest.resolution.y, static_cast<cudaMemcpyKind>(kind)));
 }
 
 s32 CudaUtil::GetMaxThreads(s32 deviceID)
@@ -121,10 +141,9 @@ bool CudaUtil::LoadTexture(Texture& tex, const std::string& path)
     cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(fsize, fsize, fsize, fsize, cudaChannelFormatKindFloat);
     CheckError(cudaMallocArray(&tex.device_data, &channelDesc, tex.resolution.x, tex.resolution.y));
     const size_t spitch = tex.resolution.x * sizeof(Vec4);
-    // Copy data located at address h_data in host memory to device memory
-    CheckError(cudaMemcpy2DToArray(tex.device_data, 0, 0, data, spitch, tex.resolution.x, tex.resolution.y, cudaMemcpyHostToDevice));
-    stbi_image_free(data);
+    CheckError(cudaMemcpy2DToArray(tex.device_data, 0, 0, data, spitch, spitch, tex.resolution.y, cudaMemcpyHostToDevice));
     // Dont need this anymore, and cudaMemcpy is not async
+    stbi_image_free(data);
     struct cudaResourceDesc resDesc;
     memset(&resDesc, 0, sizeof(resDesc));
     resDesc.resType = cudaResourceTypeArray;
@@ -144,10 +163,35 @@ bool CudaUtil::LoadTexture(Texture& tex, const std::string& path)
     return true;
 }
 
-bool CudaUtil::UnloadTexture(RayTracing::Texture& tex)
+bool CudaUtil::UnloadTexture(const Texture& tex)
 {
     if (tex.resolution.x <= 0 || tex.resolution.y <= 0) return false;
     CheckError(cudaDestroyTextureObject(tex.device_tex));
-    CheckError(cudaFreeArray(tex.device_data));
+    FreeArray(tex.device_data);
+    return true;
+}
+
+bool CudaUtil::CreateFrameBuffer(FrameBuffer& tex, Maths::IVec2 res)
+{
+    if (res.x <= 0 || res.y <= 0) return false;
+    tex.resolution = res;
+    const s32 fsize = sizeof(u8) * 8;
+    cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(fsize, fsize, fsize, fsize, cudaChannelFormatKindUnsigned);
+    CheckError(cudaMallocArray(&tex.device_data, &channelDesc, tex.resolution.x, tex.resolution.y, cudaArraySurfaceLoadStore));
+    struct cudaResourceDesc resDesc;
+    memset(&resDesc, 0, sizeof(resDesc));
+    resDesc.resType = cudaResourceTypeArray;
+    resDesc.res.array.array = tex.device_data;
+
+    // Create texture object
+    CheckError(cudaCreateSurfaceObject(&tex.device_surf, &resDesc));
+    return true;
+}
+
+bool CudaUtil::UnloadFrameBuffer(const FrameBuffer& tex)
+{
+    if (tex.resolution.x <= 0 || tex.resolution.y <= 0) return false;
+    CheckError(cudaDestroySurfaceObject(tex.device_surf));
+    FreeArray(tex.device_data);
     return true;
 }

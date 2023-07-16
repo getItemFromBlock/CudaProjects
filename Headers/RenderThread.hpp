@@ -41,8 +41,8 @@ public:
 	RenderThread() {};
 	~RenderThread() {};
 
-	void Init(const Parameters& params, s32 id);
-	void Init(HWND hwnd, Maths::IVec2 res);
+	void Init(const Parameters& params, s32 id, bool rtx);
+	void Init(HWND hwnd, Maths::IVec2 res, bool rtx);
 	void Resize(Maths::IVec2 newRes);
 	bool HasFinished() const;
 	std::vector<FrameHolder> GetFrames();
@@ -65,8 +65,10 @@ private:
 	s32 threadID = -1;
 	f32 elapsedTime = 0;
 
-	void ThreadFuncRealTime();
-	void ThreadFuncFrames();
+	void MandelbrotRealTime();
+	void MandelbrotFrames();
+	void RayTracingRealTime();
+	void RayTracingFrames();
 	void CopyToScreen();
 	void RunKernels();
 	void HandleResize();

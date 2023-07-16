@@ -156,7 +156,7 @@ int main(int argc, char* argv[])
 	RenderThread* deviceThreadPool = new RenderThread[deviceCount];
 	for (s32 i = 0; i < deviceCount; ++i)
 	{
-		deviceThreadPool[i].Init(params, i);
+		deviceThreadPool[i].Init(params, i, false);
 	}
 	std::cout << std::endl;
 	u64 max_frames = static_cast<u64>(LENGTH * params.targetFPS);

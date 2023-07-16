@@ -300,6 +300,10 @@ namespace Maths
 
         CUDA_FUNCTION inline f32& operator[](const size_t a);
 
+        CUDA_FUNCTION inline Vec2 yz() const;
+        CUDA_FUNCTION inline Vec2 zx() const;
+        CUDA_FUNCTION inline Vec2 xy() const;
+
         CUDA_FUNCTION inline Vec3 Reflect(const Vec3& normal);
 
         // Return tue if 'a' and 'b' are collinears (Precision defined by VEC_COLLINEAR_PRECISION)
@@ -746,6 +750,16 @@ namespace Maths
         CUDA_FUNCTION inline NAT_API Vec2 Clamp(Vec2 in, f32 min = 0.0f, f32 max = 1.0f);
 
         CUDA_FUNCTION inline NAT_API Vec3 Clamp(Vec3 in, f32 min = 0.0f, f32 max = 1.0f);
+
+        CUDA_FUNCTION inline NAT_API Vec4 Clamp(Vec4 in, f32 min = 0.0f, f32 max = 1.0f);
+
+        CUDA_FUNCTION inline NAT_API f32 Abs(f32 in);
+
+        CUDA_FUNCTION inline NAT_API Vec2 Abs(Vec2 in);
+
+        CUDA_FUNCTION inline NAT_API Vec3 Abs(Vec3 in);
+
+        CUDA_FUNCTION inline NAT_API Vec4 Abs(Vec4 in);
 
         CUDA_FUNCTION inline NAT_API s32 IClamp(s32 in, s32 min, s32 max);
 

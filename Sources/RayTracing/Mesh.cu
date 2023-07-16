@@ -6,10 +6,14 @@ using namespace RayTracing;
 __device__ HitRecord Mesh::Intersect(Ray r, Vec2 bounds)
 {
     HitRecord result;
-    if (!HitSphere(r, boundingSphere, bounds)) return result;
-    for (u32 i = 0; i < indiceCount; ++i)
+    if (!HitSphere(r, transformedSphere, bounds)) return result;
+    Vertice verts[3];
+    for (u32 i = 0; i < indiceCount; i += 3)
     {
-        HitRecord hit = HitTriangle(r, transformedVertices, bounds);
+        verts[0] = transformedVertices[indices[i]];
+        verts[1] = transformedVertices[indices[i+1]];
+        verts[2] = transformedVertices[indices[i+2]];
+        HitRecord hit = HitTriangle(r, verts, bounds);
         if (hit.dist < 0) continue;
         result = hit;
         bounds.y = hit.dist;

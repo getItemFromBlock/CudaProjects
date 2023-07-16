@@ -314,7 +314,7 @@ namespace Maths
         return sqrtf(i * i + j * j);
     }
 
-    inline f32 Maths::Vec2::GetAngle() const
+    inline f32 Vec2::GetAngle() const
     {
         return atan2f(y,x);
     }
@@ -619,6 +619,21 @@ namespace Maths
         return (a.x * x + a.y * y + a.z * z);
     }
 
+    inline Vec2 Vec3::yz() const
+    {
+        return Vec2(y,z);
+    }
+
+    inline Vec2 Vec3::zx() const
+    {
+        return Vec2(z, x);
+    }
+
+    inline Vec2 Vec3::xy() const
+    {
+        return Vec2(x, y);
+    }
+
     inline Vec3 Vec3::Reflect(const Vec3& normal)
     {
         return operator-(normal * (2 * Dot(normal)));
@@ -914,7 +929,7 @@ namespace Maths
         return content[x*4+y];
     }
 
-    inline const f32& Maths::Mat4::at(const u8 x, const u8 y) const
+    inline const f32& Mat4::at(const u8 x, const u8 y) const
     {
         assert(x < 4 && y < 4);
         return content[x * 4 + y];
@@ -954,7 +969,7 @@ namespace Maths
 
     inline Quat::Quat(const Mat4& in)
     {
-        Maths::Vec3 scale = in.GetScaleFromTranslation();
+        Vec3 scale = in.GetScaleFromTranslation();
         float tr = in.at(0, 0) / scale.x + in.at(1, 1) / scale.y + in.at(2, 2) / scale.z;
         if (tr > 0)
         {
@@ -1186,20 +1201,61 @@ namespace Maths
         return in;
     }
 
-    Vec2 Util::Clamp(Vec2 in, f32 min, f32 max)
+    inline Vec2 Util::Clamp(Vec2 in, f32 min, f32 max)
     {
-        for (u8 i = 0; i < 2; i++)
+        for (u8 i = 0; i < 2; ++i)
         {
             in[i] = Clamp(in[i], min, max);
         }
         return in;
     }
 
-    Vec3 Util::Clamp(Vec3 in, f32 min, f32 max)
+    inline Vec3 Util::Clamp(Vec3 in, f32 min, f32 max)
     {
-        for (u8 i = 0; i < 3; i++)
+        for (u8 i = 0; i < 3; ++i)
         {
             in[i] = Clamp(in[i], min, max);
+        }
+        return in;
+    }
+
+    inline Vec4 Util::Clamp(Vec4 in, f32 min, f32 max)
+    {
+        for (u8 i = 0; i < 4; ++i)
+        {
+            in[i] = Clamp(in[i], min, max);
+        }
+        return in;
+    }
+
+    inline f32 Util::Abs(f32 in)
+    {
+        return in >= 0 ? in : -in;
+    }
+
+    inline Vec2 Util::Abs(Vec2 in)
+    {
+        for (u8 i = 0; i < 2; ++i)
+        {
+            in[i] = Abs(in[i]);
+        }
+        return in;
+    }
+
+    inline Vec3 Util::Abs(Vec3 in)
+    {
+        for (u8 i = 0; i < 3; ++i)
+        {
+            in[i] = Abs(in[i]);
+        }
+        return in;
+    }
+
+    inline Vec4 Util::Abs(Vec4 in)
+    {
+        for (u8 i = 0; i < 4; ++i)
+        {
+            in[i] = Abs(in[i]);
         }
         return in;
     }

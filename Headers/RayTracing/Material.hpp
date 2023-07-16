@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Maths/Maths.cuh"
-#include "Texture.cuh"
 
 namespace RayTracing
 {
@@ -13,7 +12,7 @@ namespace RayTracing
 		~Material() {}
 
 		Maths::Vec3 ambientColor;
-		Maths::Vec3 diffuseColor;
+		Maths::Vec3 diffuseColor = Maths::Vec3(1);
 		Maths::Vec3 specularColor;
 		Maths::Vec3 transmittanceColor;
 		Maths::Vec3 emissionColor;
@@ -21,9 +20,9 @@ namespace RayTracing
 		f32 ior = 1;
 		f32 transparency = 0;
 
-		Texture* ambientTex = nullptr;
-		Texture* diffuseTex = nullptr;
-		Texture* specularTex = nullptr;
+		u32 ambientTex = ~0;
+		u32 diffuseTex = ~0;
+		u32 specularTex = ~0;
 	private:
 
 	};

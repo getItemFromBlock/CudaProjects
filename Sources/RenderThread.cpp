@@ -2,21 +2,41 @@
 
 #include <assert.h>
 
-using namespace Maths;
+#include "RayTracing/Texture.cuh"
+#include "RayTracing/Mesh.cuh"
+#include "RayTracing/Material.hpp"
+#include "RayTracing/ModelLoader.hpp"
 
-void RenderThread::Init(HWND hwnIn, IVec2 resIn)
+using namespace Maths;
+using namespace RayTracing;
+
+void RenderThread::Init(HWND hwnIn, IVec2 resIn, bool rtx)
 {
 	hwnd = hwnIn;
 	res = resIn;
-	thread = std::thread(&RenderThread::ThreadFuncRealTime, this);
+	if (rtx)
+	{
+		thread = std::thread(&RenderThread::RayTracingRealTime, this);
+	}
+	else
+	{
+		thread = std::thread(&RenderThread::MandelbrotRealTime, this);
+	}
 }
 
-void RenderThread::Init(const Parameters& paramsIn, s32 id)
+void RenderThread::Init(const Parameters& paramsIn, s32 id, bool rtx)
 {
 	params = paramsIn;
 	threadID = id;
 	res = IVec2(params.targetResolution.x, params.targetResolution.y);
-	thread = std::thread(&RenderThread::ThreadFuncFrames, this);
+	if (rtx)
+	{
+		thread = std::thread(&RenderThread::RayTracingFrames, this);
+	}
+	else
+	{
+		thread = std::thread(&RenderThread::MandelbrotFrames, this);
+	}
 }
 
 void RenderThread::Resize(IVec2 newRes)
@@ -102,7 +122,7 @@ void RenderThread::InitThread()
 	colorBuffer.resize(res.x * res.y);
 }
 
-void RenderThread::ThreadFuncRealTime()
+void RenderThread::MandelbrotRealTime()
 {
 	InitThread();
 	while (!exit.Load())
@@ -115,7 +135,7 @@ void RenderThread::ThreadFuncRealTime()
 	kernels.ClearKernels();
 }
 
-void RenderThread::ThreadFuncFrames()
+void RenderThread::MandelbrotFrames()
 {
 	std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
 	auto start = now.time_since_epoch();
@@ -155,4 +175,44 @@ void RenderThread::ThreadFuncFrames()
 	auto micros = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
 	elapsedTime = micros / 1000000.0f;
 	exit.Store(true);
+}
+
+void RenderThread::RayTracingRealTime()
+{
+	InitThread();
+	std::vector<Texture> textures;
+	std::vector<Material> materials;
+	std::vector<Mesh> meshes;
+	ModelLoader::LoadModel(meshes, materials, textures, "Assets/monkey.obj");
+
+	kernels.LoadTextures(textures);
+	kernels.LoadMaterials(materials);
+	kernels.LoadMeshes(meshes);
+	while (!exit.Load())
+	{
+		std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
+		auto duration = now.time_since_epoch() - start;
+		auto micros = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
+		f64 iTime = micros / 1000000.0;
+
+		HandleResize();
+		for (u32 i = 0; i < meshes.size(); ++i)
+		{
+			Mat4 mvp = Mat4::CreateTransformMatrix(Vec3(0,0,5), Quat::AxisAngle(Vec3(1, 0, 0), M_PI) * Quat::AxisAngle(Vec3(0,1,0), static_cast<f32>(iTime)));
+			kernels.UpdateMeshVertices(&meshes[i], i, mvp);
+		}
+		kernels.Synchronize();
+		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), Vec3(), Vec3(0,0,1), Vec3(0,1,0));
+		CopyToScreen();
+		//std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	}
+	kernels.UnloadTextures(textures);
+	kernels.UnloadMaterials();
+	kernels.UnloadMeshes(meshes);
+	kernels.ClearKernels();
+}
+
+void RenderThread::RayTracingFrames()
+{
+	// TODO
 }
