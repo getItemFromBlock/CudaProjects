@@ -124,6 +124,7 @@
   <ItemGroup>
     <CudaCompile Include="Sources\Kernel.cu" />
     <CudaCompile Include="Sources\Maths\Maths.cu" />
+    <CudaCompile Include="Sources\RayTracing\CubeMap.cu" />
     <CudaCompile Include="Sources\RayTracing\FrameBuffer.cu" />
     <CudaCompile Include="Sources\RayTracing\Mesh.cu" />
     <CudaCompile Include="Sources\RayTracing\RayTracing.cu" />
@@ -143,6 +144,7 @@
     <ClInclude Include="Headers\EncoderThread.hpp" />
     <ClInclude Include="Headers\Kernel.cuh" />
     <ClInclude Include="Headers\Maths\Maths.cuh" />
+    <ClInclude Include="Headers\RayTracing\CubeMap.cuh" />
     <ClInclude Include="Headers\RayTracing\FrameBuffer.cuh" />
     <ClInclude Include="Headers\RayTracing\Material.hpp" />
     <ClInclude Include="Headers\RayTracing\Mesh.cuh" />

@@ -137,6 +137,10 @@ bool CudaUtil::LoadTexture(Texture& tex, const std::string& path)
         std::cerr << "Unable to load texture: " << path << " : " << stbi_failure_reason() << std::endl;
     }
     if (tex.resolution.x <= 0 || tex.resolution.y <= 0 || !data) return false;
+    for (u64 i = 0; i < 4llu * tex.resolution.x * tex.resolution.y; ++i)
+    {
+        data[i] = powf(data[i], 1 / 2.3f);
+    }
     const s32 fsize = sizeof(f32) * 8;
     cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(fsize, fsize, fsize, fsize, cudaChannelFormatKindFloat);
     CheckError(cudaMallocArray(&tex.device_data, &channelDesc, tex.resolution.x, tex.resolution.y));

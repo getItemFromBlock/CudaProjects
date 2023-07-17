@@ -74,6 +74,20 @@ f32 RenderThread::GetElapsedTime()
 	return elapsedTime;
 }
 
+void RenderThread::MoveMouse(Vec2 delta)
+{
+	mouseLock.lock();
+	storedDelta -= delta;
+	mouseLock.unlock();
+}
+
+void RenderThread::SetKeyState(u8 key, bool state)
+{
+	keyLock.lock();
+	keys.set(key, state);
+	keyLock.unlock();
+}
+
 void RenderThread::CopyToScreen()
 {
 #ifdef _WIN32
@@ -188,20 +202,43 @@ void RenderThread::RayTracingRealTime()
 	kernels.LoadTextures(textures);
 	kernels.LoadMaterials(materials);
 	kernels.LoadMeshes(meshes);
+	f64 last = 0;
 	while (!exit.Load())
 	{
 		std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
 		auto duration = now.time_since_epoch() - start;
 		auto micros = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
 		f64 iTime = micros / 1000000.0;
+		f32 deltaTime = static_cast<f32>(iTime - last);
+		last = iTime;
 
+		mouseLock.lock();
+		Vec2 delta = storedDelta;
+		storedDelta = Vec2();
+		mouseLock.unlock();
+		delta *= 0.005f;
+		rotation.x = Util::Clamp(rotation.x + delta.y, static_cast<f32>(-M_PI_2), static_cast<f32>(M_PI_2));
+		rotation.y = Util::Mod(rotation.y + delta.x, static_cast<f32>(2 * M_PI));
+		Quat q = Quat::FromEuler(Vec3(rotation.x, rotation.y, 0.0f));
+		Maths::Vec3 dir;
+		keyLock.lock();
+		for (u8 i = 0; i < 6; ++i)
+		{
+			dir[i % 3] += (i > 2) ? -static_cast<f32>(keys.test(i)) : static_cast<f32>(keys.test(i));
+		}
+		keyLock.unlock();
+		if (dir.Dot())
+		{
+			dir = dir.Normalize() * deltaTime * 10;
+			position += q * dir;
+		}
 		HandleResize();
 		for (u32 i = 0; i < meshes.size(); ++i)
 		{
-			kernels.UpdateMeshVertices(&meshes[i], i, Vec3(0, 0, 5), Quat::AxisAngle(Vec3(1, 0, 0), M_PI) * Quat::AxisAngle(Vec3(0, 1, 0), static_cast<f32>(iTime)), Vec3(1));
+			kernels.UpdateMeshVertices(&meshes[i], i, Vec3(0, 0, 5), Quat::AxisAngle(Vec3(1, 0, 0), static_cast<f32>(M_PI)) * Quat::AxisAngle(Vec3(0, 1, 0), static_cast<f32>(iTime)), Vec3(1));
 		}
 		kernels.Synchronize();
-		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), Vec3(), Vec3(0,0,1), Vec3(0,1,0));
+		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), position, q * Vec3(0,0,1), q * Vec3(0,1,0));
 		CopyToScreen();
 		//std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}

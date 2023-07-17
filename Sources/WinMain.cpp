@@ -11,10 +11,12 @@
 
 CHAR szClassName[] = "MainClass";
 CHAR szTitle[] = "CUDA Demo";
+HCURSOR cursorHide;
 RenderThread th;
 
 LRESULT CALLBACK WndProc(_In_ HWND hWnd, _In_ UINT message, _In_ WPARAM wParam, _In_ LPARAM lParam);
-void MoveMouse(LPARAM lParam);
+void SetKeyState(WPARAM wParam, bool pressed);
+void OnMoveMouse(HWND hwnd, bool reset = false);
 
 int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR pCmdLine, _In_ int nCmdShow)
 {
@@ -23,6 +25,8 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
     //_CrtSetBreakAlloc(163);
 #endif
     {
+        cursorHide = LoadCursor(NULL, NULL);
+
         WNDCLASSEX wcex;
 
         wcex.cbSize = sizeof(WNDCLASSEX);
@@ -54,7 +58,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
         UpdateWindow(hWnd);
 
         th.Init(hWnd, Maths::IVec2(800, 600), true);
-
+        OnMoveMouse(hWnd, true);
         LONG_PTR lExStyle = GetWindowLongPtr(hWnd, GWL_EXSTYLE);
         lExStyle &= ~(WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE);
         SetWindowLongPtr(hWnd, GWL_EXSTYLE, lExStyle);
@@ -92,20 +96,71 @@ LRESULT CALLBACK WndProc(_In_ HWND hWnd, _In_ UINT message, _In_ WPARAM wParam, 
         th.Resize(Maths::IVec2(LOWORD(lParam), HIWORD(lParam)));
         break;
     case WM_KEYDOWN:
+        SetKeyState(wParam, true);
+        break;
+    case WM_KEYUP:
+        if (wParam == VK_ESCAPE)
+        {
+            DestroyWindow(hWnd);
+            break;
+        }
+        SetKeyState(wParam, false);
         break;
     case WM_SYSKEYDOWN:
         return DefWindowProc(hWnd, message, wParam, lParam);
     case WM_MOUSEMOVE:
-        MoveMouse(lParam);
+        OnMoveMouse(hWnd);
         break;
+    case WM_SETCURSOR:
+    {
+        //SetCursor(cursorHide);
+        break;
+    }
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;
 }
 
-void MoveMouse(LPARAM lParam)
+void SetKeyState(WPARAM wParam, bool pressed)
 {
-    int xPos = GET_X_LPARAM(lParam);
-    int yPos = GET_Y_LPARAM(lParam);
+    switch (wParam)
+    {
+    case 'A':
+        th.SetKeyState(0, pressed);
+        break;
+    case 'Q':
+        th.SetKeyState(1, pressed);
+        break;
+    case 'W':
+        th.SetKeyState(2, pressed);
+        break;
+    case 'D':
+        th.SetKeyState(3, pressed);
+        break;
+    case 'E':
+        th.SetKeyState(4, pressed);
+        break;
+    case 'S':
+        th.SetKeyState(5, pressed);
+        break;
+    default:
+        break;
+    }
+}
+
+void OnMoveMouse(HWND hwnd, bool reset)
+{
+    RECT rect = {};
+    POINT mPos = {};
+    GetCursorPos(&mPos);
+    GetWindowRect(hwnd, &rect);
+    int tempX = rect.left + (rect.right - rect.left) / 2;
+    int tempY = rect.top + (rect.bottom - rect.top) / 2;
+    if (mPos.x != tempX || mPos.y != tempY) {
+        int rPosX = mPos.x - tempX;
+        int rPosY = mPos.y - tempY;
+        if (!reset) th.MoveMouse(Maths::Vec2(static_cast<f32>(rPosX), static_cast<f32>(rPosY)));
+        SetCursorPos(tempX, tempY);
+    }
 }

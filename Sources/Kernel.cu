@@ -109,7 +109,7 @@ __global__ void rayTracingKernel(FrameBuffer fb, Mesh* meshes, Material* mats, T
     Maths::IVec2 pixel = Maths::IVec2(index % fb.resolution.x, index / fb.resolution.x);
     Maths::Vec2 coord = (Vec2(pixel) * 2 - fb.resolution) / fb.resolution.y;
     Vec3 right = front.Cross(up);
-    Ray r = Ray(pos, right * coord.x + up * coord.y + front);
+    Ray r = Ray(pos, right * coord.x + up * coord.y + front * 2);
     f32 far = 100000.0f;
     Material* mat = nullptr;
     HitRecord result;

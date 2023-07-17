@@ -9,6 +9,8 @@
 #include <thread>
 #include <vector>
 #include <chrono>
+#include <mutex>
+#include <bitset>
 
 #include "Types.hpp"
 #include "Signal.hpp"
@@ -48,6 +50,8 @@ public:
 	std::vector<FrameHolder> GetFrames();
 	void Quit();
 	f32 GetElapsedTime();
+	void MoveMouse(Maths::Vec2 delta);
+	void SetKeyState(u8 key, bool state);
 private:
 	std::thread thread;
 	std::chrono::system_clock::duration start = std::chrono::system_clock::duration();
@@ -56,11 +60,17 @@ private:
 	Core::Signal resize;
 	Core::Signal exit;
 	Core::Signal queueLock;
+	std::mutex mouseLock;
+	std::mutex keyLock;
 	std::vector<u32> colorBuffer;
 	std::vector<FrameHolder> queuedFrames;
 	std::vector<FrameHolder> bufferedFrames;
+	std::bitset<6> keys = 0;
 	Maths::IVec2 res;
 	Maths::IVec2 storedRes;
+	Maths::Vec2 storedDelta;
+	Maths::Vec3 position;
+	Maths::Vec2 rotation;
 	Parameters params;
 	s32 threadID = -1;
 	f32 elapsedTime = 0;
