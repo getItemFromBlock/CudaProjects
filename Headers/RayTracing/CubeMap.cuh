@@ -13,5 +13,6 @@ namespace RayTracing
 
 		__device__ Maths::Vec4 Sample(Maths::Vec3 uv) const;
 	private:
+		// https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html?highlight=cube#cubemap-textures
 	};
 }

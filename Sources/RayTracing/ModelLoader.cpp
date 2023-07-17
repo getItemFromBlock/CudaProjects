@@ -55,13 +55,17 @@ void LoadMaterials(std::vector<Material>& materials, std::vector<Texture>& textu
     {
         materials.push_back(Material());
         tinyobj::material_t* mp = &matsIn[m];
-        materials.back().ambientColor = Vec3(mp->ambient[0], mp->ambient[1], mp->ambient[2]);
         materials.back().diffuseColor = Vec3(mp->diffuse[0], mp->diffuse[1], mp->diffuse[2]);
-        materials.back().specularColor = Vec3(mp->specular[0], mp->specular[1], mp->specular[2]);
+        materials.back().emissionColor = Vec3(mp->emission[0], mp->emission[1], mp->emission[2]);
+        materials.back().transmittanceColor = Vec3(mp->transmittance[0], mp->transmittance[1], mp->transmittance[2]);
+        materials.back().ior = mp->ior;
+        materials.back().roughness = mp->roughness;
+        materials.back().metallic = mp->metallic;
 
         LoadTexture(mp->diffuse_texname, texNames, textures, materials.back().diffuseTex, file);
-        LoadTexture(mp->ambient_texname, texNames, textures, materials.back().ambientTex, file);
-        LoadTexture(mp->specular_texname, texNames, textures, materials.back().specularTex, file);
+        LoadTexture(mp->metallic_texname, texNames, textures, materials.back().metallicTex, file);
+        LoadTexture(mp->roughness_texname, texNames, textures, materials.back().roughnessTex, file);
+        LoadTexture(mp->normal_texname, texNames, textures, materials.back().normalTex, file);
     }
 }
 

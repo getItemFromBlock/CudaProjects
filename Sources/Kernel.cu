@@ -121,7 +121,8 @@ __global__ void rayTracingKernel(FrameBuffer fb, Mesh* meshes, Material* mats, T
         mat = mats + meshes[i].matIndex;
         result = hit;
     }
-    fb.Write(pixel, mat ? (mat->diffuseTex != ~0 ? texs[mat->diffuseTex].Sample(result.uv) : mat->diffuseColor) : Vec3());
+    //fb.Write(pixel, mat ? (mat->diffuseTex != ~0 ? texs[mat->diffuseTex].Sample(result.uv) : mat->diffuseColor) : Vec3());
+    fb.Write(pixel, mat ? (mat->metallicTex != ~0 ? texs[mat->metallicTex].Sample(result.uv) : Vec3(mat->metallic)) : Vec3());
 }
 
 __global__ void verticeKernel(Mesh* meshes, u32 meshIndex, Vec3 pos, Quat rot, Vec3 scale)
