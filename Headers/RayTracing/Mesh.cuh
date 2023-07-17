@@ -19,8 +19,8 @@ namespace RayTracing
         u32* indices = nullptr;
         Vertice* sourceVertices = nullptr;
         Vertice* transformedVertices = nullptr;
-        Sphere sourceSphere;
-        Sphere transformedSphere;
+        Box sourceBox;
+        Box transformedBox;
         u32 indiceCount = 0;
         u32 verticeCount = 0;
         u32 matIndex = 0;

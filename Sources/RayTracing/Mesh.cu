@@ -6,7 +6,7 @@ using namespace RayTracing;
 __device__ HitRecord Mesh::Intersect(Ray r, Vec2 bounds)
 {
     HitRecord result;
-    if (!HitSphere(r, transformedSphere, bounds)) return result;
+    if (!HitBox(r, transformedBox, bounds)) return result;
     Vertice verts[3];
     for (u32 i = 0; i < indiceCount; i += 3)
     {

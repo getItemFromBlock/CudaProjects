@@ -619,21 +619,6 @@ namespace Maths
         return (a.x * x + a.y * y + a.z * z);
     }
 
-    inline Vec2 Vec3::yz() const
-    {
-        return Vec2(y,z);
-    }
-
-    inline Vec2 Vec3::zx() const
-    {
-        return Vec2(z, x);
-    }
-
-    inline Vec2 Vec3::xy() const
-    {
-        return Vec2(x, y);
-    }
-
     inline Vec3 Vec3::Reflect(const Vec3& normal)
     {
         return operator-(normal * (2 * Dot(normal)));

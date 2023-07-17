@@ -300,10 +300,6 @@ namespace Maths
 
         CUDA_FUNCTION inline f32& operator[](const size_t a);
 
-        CUDA_FUNCTION inline Vec2 yz() const;
-        CUDA_FUNCTION inline Vec2 zx() const;
-        CUDA_FUNCTION inline Vec2 xy() const;
-
         CUDA_FUNCTION inline Vec3 Reflect(const Vec3& normal);
 
         // Return tue if 'a' and 'b' are collinears (Precision defined by VEC_COLLINEAR_PRECISION)

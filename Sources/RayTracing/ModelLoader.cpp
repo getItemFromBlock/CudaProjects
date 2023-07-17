@@ -161,9 +161,8 @@ void LoadMeshes(std::vector<Mesh>& meshes, u64 matDelta, std::vector<tinyobj::sh
         mesh.transformedVertices = CudaUtil::Allocate<Vertice>(mesh.verticeCount);
         CudaUtil::Copy(meshesD[i].indices.data(), mesh.indices, mesh.indiceCount * sizeof(u32), CudaUtil::CopyType::HToD);
         CudaUtil::Copy(meshesD[i].vertices.data(), mesh.sourceVertices, mesh.verticeCount * sizeof(Vertice), CudaUtil::CopyType::HToD);
-        mesh.sourceSphere.pos = (meshesD[i].min + meshesD[i].max) / 2;
-        mesh.sourceSphere.radius = (meshesD[i].max - meshesD[i].min).Length() / 2;
-        mesh.sourceSphere.radius = mesh.sourceSphere.radius * mesh.sourceSphere.radius;
+        mesh.sourceBox.center = (meshesD[i].min + meshesD[i].max) / 2;
+        mesh.sourceBox.radius = (meshesD[i].max - meshesD[i].min) / 2;
     }
 }
 

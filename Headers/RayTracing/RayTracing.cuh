@@ -47,8 +47,8 @@ namespace RayTracing
     {
         bool x;
         bool y;
-        BVec2() : x(false), y(false) {}
-        BVec2(bool a, bool b) : x(a), y(b) {}
+        __host__ __device__ BVec2() : x(false), y(false) {}
+        __host__ __device__ BVec2(bool a, bool b) : x(a), y(b) {}
     };
 
     struct BVec3
@@ -56,8 +56,8 @@ namespace RayTracing
         bool x;
         bool y;
         bool z;
-        BVec3() : x(false), y(false), z(false) {}
-        BVec3(bool a, bool b, bool c) : x(a), y(b), z(c) {}
+        __host__ __device__ BVec3() : x(false), y(false), z(false) {}
+        __host__ __device__ BVec3(bool a, bool b, bool c) : x(a), y(b), z(c) {}
     };
 
     __host__ __device__ bool HitSphere(const Ray& r, const Sphere& sp, Maths::Vec2 bounds);

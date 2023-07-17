@@ -198,8 +198,7 @@ void RenderThread::RayTracingRealTime()
 		HandleResize();
 		for (u32 i = 0; i < meshes.size(); ++i)
 		{
-			Mat4 mvp = Mat4::CreateTransformMatrix(Vec3(0,0,5), Quat::AxisAngle(Vec3(1, 0, 0), M_PI) * Quat::AxisAngle(Vec3(0,1,0), static_cast<f32>(iTime)));
-			kernels.UpdateMeshVertices(&meshes[i], i, mvp);
+			kernels.UpdateMeshVertices(&meshes[i], i, Vec3(0, 0, 5), Quat::AxisAngle(Vec3(1, 0, 0), M_PI) * Quat::AxisAngle(Vec3(0, 1, 0), static_cast<f32>(iTime)), Vec3(1));
 		}
 		kernels.Synchronize();
 		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), Vec3(), Vec3(0,0,1), Vec3(0,1,0));

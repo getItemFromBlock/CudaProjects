@@ -121,7 +121,7 @@ __global__ void rayTracingKernel(FrameBuffer fb, Mesh* meshes, Material* mats, T
         mat = mats + meshes[i].matIndex;
         result = hit;
     }
-    if (!mat && HitSphere(r, meshes[0].transformedSphere, Vec2(0, 1000)))
+    if (!mat && HitBox(r, meshes[0].transformedBox, Vec2(0, 1000)))
     {
         fb.Write(pixel, Vec3(1, 0, 0));
         return;
@@ -129,21 +129,25 @@ __global__ void rayTracingKernel(FrameBuffer fb, Mesh* meshes, Material* mats, T
     fb.Write(pixel, mat ? (mat->diffuseTex != ~0 ? texs[mat->diffuseTex].Sample(result.uv) : mat->diffuseColor) : Vec3());
 }
 
-__global__ void verticeKernel(Mesh* meshes, u32 meshIndex, Mat4 mvp)
+__global__ void verticeKernel(Mesh* meshes, u32 meshIndex, Vec3 pos, Quat rot, Vec3 scale)
 {
     u64 index = 1llu * threadIdx.x + blockIdx.x * blockDim.x;
     Mesh* mesh = meshes + meshIndex;
     if (index < mesh->verticeCount)
     {
-        mesh->transformedVertices[index].pos = (mvp * Vec4(mesh->sourceVertices[index].pos, 1)).GetVector();
-        mesh->transformedVertices[index].normal = (mvp * Vec4(mesh->sourceVertices[index].normal, 0)).GetVector();
+        mesh->transformedVertices[index].pos = pos + rot * mesh->sourceVertices[index].pos * scale;
+        mesh->transformedVertices[index].normal = rot * mesh->sourceVertices[index].normal;
         mesh->transformedVertices[index].uv = mesh->sourceVertices[index].uv;
     }
     else if (index == mesh->verticeCount)
     {
-        mesh->transformedSphere.pos = (mvp * Vec4(mesh->sourceSphere.pos, 1)).GetVector();
-        Vec3 scale = mvp.GetScaleFromTranslation() * mesh->sourceSphere.radius;
-        mesh->transformedSphere.radius = Util::MaxF(Util::MaxF(scale.x, scale.y), scale.z);
+        mesh->transformedBox.center = pos + rot * mesh->sourceBox.center * scale;
+        mesh->transformedBox.radius = mesh->sourceBox.radius * scale;
+        for (u8 i = 0; i < 3; ++i)
+        {
+            mesh->transformedBox.invRadius[i] = 1 / mesh->transformedBox.radius[i];
+        }
+        mesh->transformedBox.rotation = rot;
     }
 }
 
@@ -186,11 +190,11 @@ void Kernel::RunKernels(u32* img, f64 iTime)
     CudaUtil::CopyFrameBuffer(fb, img, CudaUtil::CopyType::DToH);
 }
 
-void Kernel::UpdateMeshVertices(Mesh* mesh, u32 index, const Mat4& mvp)
+void Kernel::UpdateMeshVertices(Mesh* mesh, u32 index, const Maths::Vec3& pos, const Maths::Quat& rot, const Maths::Vec3& scale)
 {
     u32 count = mesh->verticeCount + 1;
     s32 M = CudaUtil::GetMaxThreads(deviceID);
-    verticeKernel<<<(count + M - 1) / M, M>>>(device_meshes, index, mvp);
+    verticeKernel<<<(count + M - 1) / M, M>>>(device_meshes, index, pos, rot, scale);
     CudaUtil::CheckError(cudaGetLastError(), "verticeKernel launch failed: %s");
 }
 

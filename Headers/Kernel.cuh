@@ -24,7 +24,7 @@ public:
 	void LoadMeshes(const std::vector<RayTracing::Mesh> meshes);
 	void LoadTextures(const std::vector<RayTracing::Texture> textures);
 	void LoadMaterials(const std::vector<RayTracing::Material> materials);
-	void UpdateMeshVertices(RayTracing::Mesh* mesh, u32 index, const Maths::Mat4& mvp);
+	void UpdateMeshVertices(RayTracing::Mesh* mesh, u32 index, const Maths::Vec3& pos, const Maths::Quat& rot, const Maths::Vec3& scale);
 	void Synchronize();
 	void RenderMeshes(u32* img, u32 meshCount, Maths::Vec3 pos, Maths::Vec3 front, Maths::Vec3 up);
 	void UnloadMeshes(const std::vector<RayTracing::Mesh>& meshes);
