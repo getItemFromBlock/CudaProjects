@@ -65,8 +65,8 @@ RayTracing::HitRecord RayTracing::HitTriangle(const Ray& r, Vertice* vertices, V
     bar.z = 1 - (bar.x + bar.y);
     for (u8 i = 0; i < 3; ++i)
     {
-        result.uv += vertices[i].uv * bar[i];
-        result.normal += vertices[i].normal * bar[i];
+        result.uv += vertices[i].uv * bar[(i + 2) % 3];
+        result.normal += vertices[i].normal * bar[(i + 2) % 3];
     }
     result.pos = r.pos + r.dir * result.dist;
     return result;

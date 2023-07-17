@@ -197,7 +197,7 @@ void RenderThread::RayTracingRealTime()
 	std::vector<Texture> textures;
 	std::vector<Material> materials;
 	std::vector<Mesh> meshes;
-	ModelLoader::LoadModel(meshes, materials, textures, "Assets/monkey.obj");
+	ModelLoader::LoadModel(meshes, materials, textures, "Assets/scene1.obj");
 
 	kernels.LoadTextures(textures);
 	kernels.LoadMaterials(materials);
@@ -235,7 +235,7 @@ void RenderThread::RayTracingRealTime()
 		HandleResize();
 		for (u32 i = 0; i < meshes.size(); ++i)
 		{
-			kernels.UpdateMeshVertices(&meshes[i], i, Vec3(0, 0, 5), Quat::AxisAngle(Vec3(1, 0, 0), static_cast<f32>(M_PI)) * Quat::AxisAngle(Vec3(0, 1, 0), static_cast<f32>(iTime)), Vec3(1));
+			kernels.UpdateMeshVertices(&meshes[i], i, Vec3(0, 0, 5), Quat::AxisAngle(Vec3(1, 0, 0), static_cast<f32>(M_PI)), Vec3(1));
 		}
 		kernels.Synchronize();
 		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), position, q * Vec3(0,0,1), q * Vec3(0,1,0));

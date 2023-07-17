@@ -11,7 +11,8 @@
 
 CHAR szClassName[] = "MainClass";
 CHAR szTitle[] = "CUDA Demo";
-HCURSOR cursorHide;
+HCURSOR cursorHide, cursorDefault;
+bool captured = true;
 RenderThread th;
 
 LRESULT CALLBACK WndProc(_In_ HWND hWnd, _In_ UINT message, _In_ WPARAM wParam, _In_ LPARAM lParam);
@@ -25,10 +26,10 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
     //_CrtSetBreakAlloc(163);
 #endif
     {
-        cursorHide = LoadCursor(NULL, NULL);
+        cursorDefault = LoadCursor(NULL, IDC_ARROW);
+        cursorHide = nullptr;
 
         WNDCLASSEX wcex;
-
         wcex.cbSize = sizeof(WNDCLASSEX);
         wcex.style = CS_HREDRAW | CS_VREDRAW;
         wcex.lpfnWndProc = WndProc;
@@ -101,7 +102,12 @@ LRESULT CALLBACK WndProc(_In_ HWND hWnd, _In_ UINT message, _In_ WPARAM wParam, 
     case WM_KEYUP:
         if (wParam == VK_ESCAPE)
         {
-            DestroyWindow(hWnd);
+            captured = !captured;
+            SetCursor(captured ? cursorHide : cursorDefault);
+            if (captured)
+            {
+                OnMoveMouse(hWnd, true);
+            }
             break;
         }
         SetKeyState(wParam, false);
@@ -109,11 +115,11 @@ LRESULT CALLBACK WndProc(_In_ HWND hWnd, _In_ UINT message, _In_ WPARAM wParam, 
     case WM_SYSKEYDOWN:
         return DefWindowProc(hWnd, message, wParam, lParam);
     case WM_MOUSEMOVE:
-        OnMoveMouse(hWnd);
+        if (captured) OnMoveMouse(hWnd);
         break;
     case WM_SETCURSOR:
     {
-        //SetCursor(cursorHide);
+        SetCursor(captured ? cursorHide : cursorDefault);
         break;
     }
     default:

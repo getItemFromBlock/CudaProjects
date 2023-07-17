@@ -121,11 +121,6 @@ __global__ void rayTracingKernel(FrameBuffer fb, Mesh* meshes, Material* mats, T
         mat = mats + meshes[i].matIndex;
         result = hit;
     }
-    if (!mat && HitBox(r, meshes[0].transformedBox, Vec2(0, 1000)))
-    {
-        fb.Write(pixel, Vec3(1, 0, 0));
-        return;
-    }
     fb.Write(pixel, mat ? (mat->diffuseTex != ~0 ? texs[mat->diffuseTex].Sample(result.uv) : mat->diffuseColor) : Vec3());
 }
 

@@ -69,7 +69,7 @@ private:
 	Maths::IVec2 res;
 	Maths::IVec2 storedRes;
 	Maths::Vec2 storedDelta;
-	Maths::Vec3 position;
+	Maths::Vec3 position = Maths::Vec3(0,1,0);
 	Maths::Vec2 rotation;
 	Parameters params;
 	s32 threadID = -1;
