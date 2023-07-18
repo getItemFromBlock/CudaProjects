@@ -65,7 +65,7 @@ private:
 	std::vector<u32> colorBuffer;
 	std::vector<FrameHolder> queuedFrames;
 	std::vector<FrameHolder> bufferedFrames;
-	std::bitset<6> keys = 0;
+	std::bitset<7> keys = 0;
 	Maths::IVec2 res;
 	Maths::IVec2 storedRes;
 	Maths::Vec2 storedDelta;

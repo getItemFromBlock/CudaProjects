@@ -149,6 +149,9 @@ void SetKeyState(WPARAM wParam, bool pressed)
     case 'S':
         th.SetKeyState(5, pressed);
         break;
+    case VK_RETURN:
+        th.SetKeyState(6, pressed);
+        break;
     default:
         break;
     }

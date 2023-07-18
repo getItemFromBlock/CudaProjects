@@ -6,6 +6,7 @@ using namespace Maths;
 using namespace RayTracing;
 
 #define MAX_ITER 2048
+#define FOV 3.55f
 
 __device__ void HSVtoRGB(Vec3& rgb, const Vec3& hsv)
 {
@@ -124,7 +125,7 @@ __global__ void RayTracingKernel(FrameBuffer fb, const Mesh* meshes, const Mater
     Maths::IVec2 pixel = Maths::IVec2(index % fb.resolution.x, index / fb.resolution.x);
     Maths::Vec2 coord = (Vec2(pixel) * 2 - fb.resolution) / fb.resolution.y;
     Vec3 right = front.Cross(up);
-    Ray r = Ray(pos, right * coord.x + up * coord.y + front * 3.55f);
+    Ray r = Ray(pos, right * coord.x + up * coord.y + front * FOV);
     f32 far = 100000.0f;
     Material* mat = nullptr;
     Vec3 color;
@@ -173,7 +174,7 @@ __global__ void RayTracingKernelDebug(FrameBuffer fb, const Mesh* meshes, const 
     Maths::IVec2 pixel = Maths::IVec2(index % fb.resolution.x, index / fb.resolution.x);
     Maths::Vec2 coord = (Vec2(pixel) * 2 - fb.resolution) / fb.resolution.y;
     Vec3 right = front.Cross(up);
-    Ray r = Ray(pos, right * coord.x + up * coord.y + front * 2);
+    Ray r = Ray(pos, right * coord.x + up * coord.y + front * FOV);
     f32 far = 100000.0f;
     Material* mat = nullptr;
     HitRecord result = RayTrace(r, meshes, mats, meshCount, far, mat);
@@ -272,31 +273,51 @@ void Kernel::UpdateMeshVertices(Mesh* mesh, u32 index, const Maths::Vec3& pos, c
 }
 
 s32 M = 0;
-void Kernel::RenderMeshes(u32* img, u32 meshCount, Vec3 pos, Vec3 front, Vec3 up)
+void Kernel::RenderMeshes(u32* img, u32 meshCount, Vec3 pos, Vec3 front, Vec3 up, bool advanced)
 {
     u32 count = fb.resolution.x * fb.resolution.y;
     if (M)
     {
-        RayTracingKernel<<<(count + M - 1) / M, M>>>(fb, device_meshes, device_materials, device_textures, pos, front, up, meshCount);
+        if (advanced)
+        {
+            RayTracingKernel<<<(count + M - 1) / M, M>>>(fb, device_meshes, device_materials, device_textures, pos, front, up, meshCount);
+        }
+        else
+        {
+            RayTracingKernelDebug<<<(count + M - 1) / M, M>>>(fb, device_meshes, device_materials, device_textures, pos, front, up, meshCount);
+        }
         CudaUtil::CheckError(cudaGetLastError(), "RayTracingKernelDebug launch failed: %s");
     }
     else
     {
         M = CudaUtil::GetMaxThreads(deviceID);
-        RayTracingKernelDebug<<<(count + M - 1) / M, M>>>(fb, device_meshes, device_materials, device_textures, pos, front, up, meshCount);
+        if (advanced)
+        {
+            RayTracingKernel<<<(count + M - 1) / M, M>>>(fb, device_meshes, device_materials, device_textures, pos, front, up, meshCount);
+        }
+        else
+        {
+            RayTracingKernelDebug<<<(count + M - 1) / M, M>>>(fb, device_meshes, device_materials, device_textures, pos, front, up, meshCount);
+        }
         cudaError_t result = cudaGetLastError();
         u32 counter = 0;
         while (result != cudaSuccess && M > 16 && counter < 10)
         {
             M /= 2;
             ++counter;
-            RayTracingKernelDebug<<<(count + M - 1) / M, M>>>(fb, device_meshes, device_materials, device_textures, pos, front, up, meshCount);
+            if (advanced)
+            {
+                RayTracingKernel<<<(count + M - 1) / M, M>>>(fb, device_meshes, device_materials, device_textures, pos, front, up, meshCount);
+            }
+            else
+            {
+                RayTracingKernelDebug<<<(count + M - 1) / M, M>>>(fb, device_meshes, device_materials, device_textures, pos, front, up, meshCount);
+            }
             result = cudaGetLastError();
         }
         CudaUtil::CheckError(result, "Could not find adequate core number: %s");
     }
     CudaUtil::SynchronizeDevice();
-
     CudaUtil::CopyFrameBuffer(fb, img, CudaUtil::CopyType::DToH);
 }
 

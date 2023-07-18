@@ -226,6 +226,7 @@ void RenderThread::RayTracingRealTime()
 		{
 			dir[i % 3] += (i > 2) ? -static_cast<f32>(keys.test(i)) : static_cast<f32>(keys.test(i));
 		}
+		bool advanced = keys.test(6);
 		keyLock.unlock();
 		if (dir.Dot())
 		{
@@ -238,7 +239,7 @@ void RenderThread::RayTracingRealTime()
 			kernels.UpdateMeshVertices(&meshes[i], i, Vec3(0, 0, 0), Quat::AxisAngle(Vec3(1, 0, 0), static_cast<f32>(M_PI)), Vec3(1));
 		}
 		kernels.Synchronize();
-		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), position, q * Vec3(0,0,1), q * Vec3(0,1,0));
+		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), position, q * Vec3(0,0,1), q * Vec3(0,1,0), advanced);
 		CopyToScreen();
 		//std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
