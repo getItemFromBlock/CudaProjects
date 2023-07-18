@@ -65,35 +65,55 @@ void LoadMaterials(std::vector<Material>& materials, std::vector<Texture>& textu
         LoadTexture(mp->diffuse_texname, texNames, textures, materials.back().diffuseTex, file);
         LoadTexture(mp->metallic_texname, texNames, textures, materials.back().metallicTex, file);
         LoadTexture(mp->roughness_texname, texNames, textures, materials.back().roughnessTex, file);
-        LoadTexture(mp->normal_texname, texNames, textures, materials.back().normalTex, file);
+        LoadTexture(mp->bump_texname, texNames, textures, materials.back().normalTex, file);
     }
 }
 
 template <>
-struct std::hash<IVec3>
+struct std::hash<VertexData>
 {
-    std::size_t operator()(const IVec3& k) const
+    std::size_t operator()(const VertexData& k) const
     {
+        return ((((((hash<s32>()(k.pos) ^ (hash<s32>()(k.norm) << 1)) >> 1) ^ (hash<s32>()(k.uv) << 1)) << 1) ^ (hash<s32>()(k.tang) << 1)) >> 1) ^ (hash<s32>()(k.cotang) << 1);
+    }
+};
 
-        // Compute individual hash values for first,
-        // second and third and combine them using XOR
-        // and bit shifting:
-
-        return ((hash<s32>()(k.x)
-            ^ (hash<s32>()(k.y) << 1)) >> 1)
-            ^ (hash<s32>()(k.z) << 1);
+template <>
+struct std::hash<Vec3>
+{
+    std::size_t operator()(const Vec3& k) const
+    {
+        return ((hash<f32>()(k.x)
+            ^ (hash<f32>()(k.y) << 1)) >> 1)
+            ^ (hash<f32>()(k.z) << 1);
     }
 };
 
 struct MeshData
 {
-    std::unordered_map<IVec3, u32> bufferedVertices;
+    std::unordered_map<VertexData, u32> bufferedVertices;
+    std::unordered_map<Vec3, u32> bufferedTangent;
+    std::unordered_map<Vec3, u32> bufferedCotangent;
+    std::vector<Vec3> tangents;
+    std::vector<Vec3> cotangents;
     std::vector<Vertice> vertices;
     std::vector<u32> indices;
     Maths::Vec3 min = INFINITY;
     Maths::Vec3 max = -INFINITY;
     u32 matIndex = 0;
 };
+
+Vec3 GetVec3(s32 index, const std::vector<tinyobj::real_t>& vals)
+{
+    if (index < 0) return Vec3();
+    return Vec3(vals[index * 3llu], vals[index * 3llu + 1], vals[index * 3llu + 2]);
+}
+
+Vec2 GetVec2(s32 index, const std::vector<tinyobj::real_t>& vals)
+{
+    if (index < 0) return Vec2();
+    return Vec2(vals[index * 2llu], vals[index * 2llu + 1]);
+}
 
 void LoadMeshes(std::vector<Mesh>& meshes, u64 matDelta, std::vector<tinyobj::shape_t> meshesIn, const tinyobj::attrib_t& attributes)
 {
@@ -127,10 +147,57 @@ void LoadMeshes(std::vector<Mesh>& meshes, u64 matDelta, std::vector<tinyobj::sh
                 lastID = mp->material_ids[i];
             }
             auto& data = meshesD[meshIndex + meshDelta];
+            TriangleData tr;
             for (u8 j = 0; j < 3; ++j)
             {
-                Maths::IVec3 vert = Maths::IVec3(mp->indices[i * 3 + j].vertex_index, mp->indices[i * 3 + j].normal_index, mp->indices[i * 3 + j].texcoord_index);
-                auto result = data.bufferedVertices.find(vert);
+                tr.data[j].pos = mp->indices[i * 3 + j].vertex_index;
+                tr.data[j].norm = mp->indices[i * 3 + j].normal_index;
+                tr.data[j].uv = mp->indices[i * 3 + j].texcoord_index;
+            }
+            Vec3 tangent;
+            Vec3 bitangent;
+            Vec3 edge1 = GetVec3(tr.data[1].pos, attributes.vertices) - GetVec3(tr.data[0].pos, attributes.vertices);
+            Vec3 edge2 = GetVec3(tr.data[2].pos, attributes.vertices) - GetVec3(tr.data[0].pos, attributes.vertices);
+            Vec2 deltaUV1 = GetVec2(tr.data[1].uv, attributes.texcoords) - GetVec2(tr.data[0].uv, attributes.texcoords);
+            Vec2 deltaUV2 = GetVec2(tr.data[2].uv, attributes.texcoords) - GetVec2(tr.data[0].uv, attributes.texcoords);
+            f32 f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+            tangent.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+            tangent.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+            tangent.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+            tangent = tangent.Normalize();
+            bitangent.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
+            bitangent.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
+            bitangent.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+            bitangent = -bitangent.Normalize();
+            s32 tIndex = -1;
+            s32 cIndex = -1;
+            auto& result = data.bufferedTangent.find(tangent);
+            if (result != data.bufferedTangent.end())
+            {
+                tIndex = result->second;
+            }
+            else
+            {
+                data.bufferedTangent[tangent] = static_cast<s32>(data.tangents.size());
+                tIndex = static_cast<s32>(data.tangents.size());
+                data.tangents.push_back(tangent);
+            }
+            auto& result2 = data.bufferedCotangent.find(bitangent);
+            if (result2 != data.bufferedCotangent.end())
+            {
+                cIndex = result2->second;
+            }
+            else
+            {
+                data.bufferedCotangent[tangent] = static_cast<s32>(data.cotangents.size());
+                cIndex = static_cast<s32>(data.cotangents.size());
+                data.cotangents.push_back(bitangent);
+            }
+            for (u8 j = 0; j < 3; ++j)
+            {
+                tr.data[j].tang = tIndex;
+                tr.data[j].cotang = cIndex;
+                auto result = data.bufferedVertices.find(tr.data[j]);
                 if (result != data.bufferedVertices.end())
                 {
                     data.indices.push_back(result->second);
@@ -139,15 +206,25 @@ void LoadMeshes(std::vector<Mesh>& meshes, u64 matDelta, std::vector<tinyobj::sh
                 {
                     data.indices.push_back(static_cast<u32>(data.vertices.size()));
                     data.vertices.push_back(Vertice());
-                    data.vertices.back().pos = Maths::Vec3(attributes.vertices[vert.x * 3], attributes.vertices[vert.x * 3 + 1], attributes.vertices[vert.x * 3 + 2]);
-                    data.vertices.back().normal = Maths::Vec3(attributes.normals[vert.y * 3], attributes.normals[vert.y * 3 + 1], attributes.normals[vert.y * 3 + 2]);
-                    data.vertices.back().uv = Maths::Vec2(attributes.texcoords[vert.z * 2], attributes.texcoords[vert.z * 2 + 1]);
+                    data.vertices.back().pos = GetVec3(tr.data[j].pos, attributes.vertices);
+                    data.vertices.back().uv = GetVec2(tr.data[j].uv, attributes.texcoords);
+                    if (tr.data[j].norm >= 0)
+                    {
+                        data.vertices.back().normal = GetVec3(tr.data[j].norm, attributes.normals);
+                        data.vertices.back().normal.y = -data.vertices.back().normal.y;
+                    }
+                    else
+                    {
+                        data.vertices.back().normal = Vec3(0, 0, 1);
+                    }
+                    data.vertices.back().tangent = data.tangents[tr.data[j].tang];
+                    data.vertices.back().cotangent = data.cotangents[tr.data[j].cotang];
                     for (u8 h = 0; h < 3; ++h)
                     {
                         data.min[h] = Util::MinF(data.min[h], data.vertices.back().pos[h]);
                         data.max[h] = Util::MaxF(data.max[h], data.vertices.back().pos[h]);
                     }
-                    data.bufferedVertices[vert] = data.indices.back();
+                    data.bufferedVertices[tr.data[j]] = data.indices.back();
                 }
             }
         }

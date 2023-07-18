@@ -13,9 +13,9 @@ namespace RayTracing
         Mesh() {};
         ~Mesh() {};
 
-        __device__ HitRecord Intersect(Ray r, Maths::Vec2 bounds);
-        __device__ void ApplyTransform(const Maths::Mat4& transform, u32 index);
-        __host__ __device__ u32 GetIndiceCount();
+        __device__ HitRecord Intersect(Ray r, Maths::Vec2 bounds, bool inverted = false) const;
+        __device__ void FillData(const HitRecord& res, Maths::Vec3& normal, Maths::Vec3& tangent, Maths::Vec3& cotangent, Maths::Vec2& uv) const;
+        __host__ __device__ u32 GetIndiceCount() const;
         u32* indices = nullptr;
         Vertice* sourceVertices = nullptr;
         Vertice* transformedVertices = nullptr;

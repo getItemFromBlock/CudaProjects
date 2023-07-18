@@ -12,7 +12,7 @@
 CHAR szClassName[] = "MainClass";
 CHAR szTitle[] = "CUDA Demo";
 HCURSOR cursorHide, cursorDefault;
-bool captured = true;
+bool captured = false;
 RenderThread th;
 
 LRESULT CALLBACK WndProc(_In_ HWND hWnd, _In_ UINT message, _In_ WPARAM wParam, _In_ LPARAM lParam);
@@ -29,7 +29,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
         cursorDefault = LoadCursor(NULL, IDC_ARROW);
         cursorHide = nullptr;
 
-        WNDCLASSEX wcex;
+        WNDCLASSEX wcex = {};
         wcex.cbSize = sizeof(WNDCLASSEX);
         wcex.style = CS_HREDRAW | CS_VREDRAW;
         wcex.lpfnWndProc = WndProc;
@@ -59,7 +59,6 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
         UpdateWindow(hWnd);
 
         th.Init(hWnd, Maths::IVec2(800, 600), true);
-        OnMoveMouse(hWnd, true);
         LONG_PTR lExStyle = GetWindowLongPtr(hWnd, GWL_EXSTYLE);
         lExStyle &= ~(WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE);
         SetWindowLongPtr(hWnd, GWL_EXSTYLE, lExStyle);

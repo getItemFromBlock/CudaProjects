@@ -99,7 +99,7 @@ void RenderThread::CopyToScreen()
 	info.bmiHeader.biPlanes = 1;
 	info.bmiHeader.biBitCount = 32;
 	info.bmiHeader.biCompression = BI_RGB;
-	info.bmiHeader.biSizeImage = res.x * res.y * sizeof(u32);
+	info.bmiHeader.biSizeImage = sizeof(u32) * res.x * res.y;
 	int t = SetDIBitsToDevice(hdc, 0, 0, res.x, res.y, 0, 0, 0, res.y, colorBuffer.data(), &info, DIB_RGB_COLORS);
 	ReleaseDC(hwnd, hdc);
 #endif
@@ -118,9 +118,9 @@ void RenderThread::HandleResize()
 {
 	if (resize.Load())
 	{
-		if (colorBuffer.size() < 1llu * storedRes.x * storedRes.y)
+		if (colorBuffer.size() < static_cast<u64>(storedRes.x) * storedRes.y)
 		{
-			colorBuffer.resize(storedRes.x * storedRes.y);
+			colorBuffer.resize(static_cast<u64>(storedRes.x) * storedRes.y);
 		}
 		res = storedRes;
 		kernels.Resize(res);
@@ -133,7 +133,7 @@ void RenderThread::InitThread()
 	std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
 	start = now.time_since_epoch();
 	kernels.InitKernels(res, threadID);
-	colorBuffer.resize(res.x * res.y);
+	colorBuffer.resize(static_cast<u64>(res.x) * res.y);
 }
 
 void RenderThread::MandelbrotRealTime()
@@ -154,7 +154,7 @@ void RenderThread::MandelbrotFrames()
 	std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
 	auto start = now.time_since_epoch();
 	InitThread();
-	u64 frame = params.startFrame + threadID;
+	u64 frame = static_cast<u64>(params.startFrame) + threadID;
 	f64 iTime = 1.0 / params.targetFPS * frame;
 	const s32 count = CudaUtil::GetDevicesCount();
 	while (iTime < LENGTH && !exit.Load())
@@ -235,7 +235,7 @@ void RenderThread::RayTracingRealTime()
 		HandleResize();
 		for (u32 i = 0; i < meshes.size(); ++i)
 		{
-			kernels.UpdateMeshVertices(&meshes[i], i, Vec3(0, 0, 5), Quat::AxisAngle(Vec3(1, 0, 0), static_cast<f32>(M_PI)), Vec3(1));
+			kernels.UpdateMeshVertices(&meshes[i], i, Vec3(0, 0, 0), Quat::AxisAngle(Vec3(1, 0, 0), static_cast<f32>(M_PI)), Vec3(1));
 		}
 		kernels.Synchronize();
 		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), position, q * Vec3(0,0,1), q * Vec3(0,1,0));

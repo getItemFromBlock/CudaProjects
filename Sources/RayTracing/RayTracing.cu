@@ -38,22 +38,21 @@ bool RayTracing::HitSphere(const Ray& r, const Sphere& sp, Vec2 bounds)
     return true;
 }
 
-RayTracing::HitRecord RayTracing::HitTriangle(const Ray& r, Vertice* vertices, Vec2 bounds)
+RayTracing::HitRecord RayTracing::HitTriangle(const Ray& r, Vec3 vertices[3], Vec2 bounds)
 {
     HitRecord result;
-    Vec3 A = vertices[0].pos;
-    Vec3 AB = vertices[1].pos - A;
-    Vec3 AC = vertices[2].pos - A;
-    Vec3 bar;
+    Vec3 A = vertices[0];
+    Vec3 AB = vertices[1] - A;
+    Vec3 AC = vertices[2] - A;
     Vec3 pvec = r.dir.Cross(AC);
     f32 det = AB.Dot(pvec);
     if (det < 0.00001f) return result;
     Vec3 tvec = r.pos - A;
-    bar.x = tvec.Dot(pvec);
-    if (bar.x < 0 || bar.x > det) return result;
+    result.barycentric.x = tvec.Dot(pvec);
+    if (result.barycentric.x < 0 || result.barycentric.x > det) return result;
     Vec3 qvec = tvec.Cross(AB);
-    bar.y = r.dir.Dot(qvec);
-    if (bar.y < 0 || bar.y + bar.x > det) return result;
+    result.barycentric.y = r.dir.Dot(qvec);
+    if (result.barycentric.y < 0 || result.barycentric.y + result.barycentric.x > det) return result;
     det = 1 / det;
     result.dist = AC.Dot(qvec) * det;
     if (result.dist < bounds.x || result.dist > bounds.y)
@@ -61,13 +60,8 @@ RayTracing::HitRecord RayTracing::HitTriangle(const Ray& r, Vertice* vertices, V
         result.dist = -1;
         return result;
     }
-    bar *= det;
-    bar.z = 1 - (bar.x + bar.y);
-    for (u8 i = 0; i < 3; ++i)
-    {
-        result.uv += vertices[i].uv * bar[(i + 2) % 3];
-        result.normal += vertices[i].normal * bar[(i + 2) % 3];
-    }
+    result.barycentric *= det;
+    result.barycentric.z = 1 - (result.barycentric.x + result.barycentric.y);
     result.pos = r.pos + r.dir * result.dist;
     return result;
 }
@@ -122,10 +116,10 @@ bool RayTracing::HitBox(Ray ray, const Box& box, Vec2 bounds)
     ray.dir = box.rotation * ray.dir;
 
     Vec3 comp = Util::Abs(ray.pos) * box.invRadius;
-    float winding = (Util::MaxF(Util::MaxF(comp.x, comp.y), comp.z) < 1) ? -1.0f : 1.0f;
+    if (Util::MaxF(Util::MaxF(comp.x, comp.y), comp.z) <= 1) return true;
     Vec3 sgn = -sign(ray.dir);
 
-    Vec3 distanceToPlane = box.radius * winding * sgn - ray.pos;
+    Vec3 distanceToPlane = box.radius * sgn - ray.pos;
     distanceToPlane /= ray.dir;
 
 #   define TEST(U, VW)\

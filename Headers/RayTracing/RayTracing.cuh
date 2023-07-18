@@ -10,14 +10,17 @@ namespace RayTracing
     {
         Maths::Vec3 pos;
         Maths::Vec3 normal;
+        Maths::Vec3 tangent;
+        Maths::Vec3 cotangent;
         Maths::Vec2 uv;
     };
 
     struct HitRecord
     {
         Maths::Vec3 pos;
-        Maths::Vec3 normal;
-        Maths::Vec2 uv;
+        Maths::Vec3 barycentric;
+        u32 indice = 0;
+        u32 mesh = 0;
         f32 dist = -1;
     };
 
@@ -62,7 +65,7 @@ namespace RayTracing
 
     __host__ __device__ bool HitSphere(const Ray& r, const Sphere& sp, Maths::Vec2 bounds);
 
-    __host__ __device__ HitRecord HitTriangle(const Ray& r, Vertice* vertices, Maths::Vec2 bounds);
+    __host__ __device__ HitRecord HitTriangle(const Ray& r, Maths::Vec3 vertices[3], Maths::Vec2 bounds);
 
     __host__ __device__ bool HitBox(Ray r, const Box& box, Maths::Vec2 bounds);
 }

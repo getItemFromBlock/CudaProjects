@@ -3,32 +3,44 @@
 using namespace Maths;
 using namespace RayTracing;
 
-__device__ HitRecord Mesh::Intersect(Ray r, Vec2 bounds)
+__device__ HitRecord Mesh::Intersect(Ray r, Vec2 bounds, bool inverted) const
 {
     HitRecord result;
     if (!HitBox(r, transformedBox, bounds)) return result;
-    Vertice verts[3];
+    Vec3 verts[3];
     for (u32 i = 0; i < indiceCount; i += 3)
     {
-        verts[0] = transformedVertices[indices[i]];
-        verts[1] = transformedVertices[indices[i+1]];
-        verts[2] = transformedVertices[indices[i+2]];
+        verts[0] = transformedVertices[indices[i]].pos;
+        verts[1] = transformedVertices[indices[i+1+inverted]].pos;
+        verts[2] = transformedVertices[indices[i+2-inverted]].pos;
         HitRecord hit = HitTriangle(r, verts, bounds);
         if (hit.dist < 0) continue;
         result = hit;
+        result.indice = i;
         bounds.y = hit.dist;
     }
     return result;
 }
 
-__device__ void Mesh::ApplyTransform(const Mat4& transform, u32 index)
+__device__ void Mesh::FillData(const HitRecord& res, Vec3& normal, Vec3& tangent, Vec3& cotangent, Vec2& uv) const
 {
-    transformedVertices[index].pos = (transform * Vec4(sourceVertices[index].pos, 1)).GetVector();
-    transformedVertices[index].normal = (transform * Vec4(sourceVertices[index].pos, 0)).GetVector();
-    transformedVertices[index].uv = sourceVertices[index].uv;
+    if (res.indice >= indiceCount) return;
+    for (u32 i = 0; i < 3; ++i)
+    {
+        Vertice& vert = transformedVertices[indices[res.indice + i]];
+        u32 j = i ? i - 1 : 2;
+        normal += vert.normal * res.barycentric[j];
+        uv += vert.uv * res.barycentric[j];
+        if (i == 0)
+        {
+            tangent = vert.tangent;
+            cotangent = vert.cotangent;
+        }
+    }
+    normal = normal.Normalize();
 }
 
-__host__ __device__ u32 Mesh::GetIndiceCount()
+__host__ __device__ u32 Mesh::GetIndiceCount() const
 {
     return indiceCount;
 }

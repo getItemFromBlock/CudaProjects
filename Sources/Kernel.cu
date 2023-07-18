@@ -46,7 +46,7 @@ __device__ void HSVtoRGB(Vec3& rgb, const Vec3& hsv)
 }
 
 
-__device__ u32 mandelbrot(f64 x0, f64 y0)
+__device__ u32 Mandelbrot(f64 x0, f64 y0)
 {
     u32 iteration = 0;
     f64 x = 0;
@@ -76,10 +76,10 @@ __device__ u32 mandelbrot(f64 x0, f64 y0)
     return iteration;
 }
 
-__global__ void fractalKernel(FrameBuffer fb, f64 iTime)
+__global__ void FractalKernel(FrameBuffer fb, f64 iTime)
 {
-    u64 index = 1llu * threadIdx.x + blockIdx.x * blockDim.x;
-    if (index >= 1llu * fb.resolution.x * fb.resolution.y) return;
+    u64 index = threadIdx.x + static_cast<u64>(blockIdx.x) * blockDim.x;
+    if (index >= static_cast<u64>(fb.resolution.x) * fb.resolution.y) return;
     Maths::IVec2 pixel = Maths::IVec2(index % fb.resolution.x, index / fb.resolution.x);
     f64 py = (pixel.y * 2.0 - fb.resolution.y) / fb.resolution.y;
     f64 px = (pixel.x * 2.0 - fb.resolution.x) / fb.resolution.y;
@@ -89,7 +89,7 @@ __global__ void fractalKernel(FrameBuffer fb, f64 iTime)
     f64 x = -0.04801030109002 + px * zoo;
     f64 y = 0.6806 + py * zoo;
 
-    u32 val = mandelbrot(x,y);
+    u32 val = Mandelbrot(x,y);
     if (val == MAX_ITER)
     {
         fb.Write(pixel, Maths::Vec3());
@@ -102,38 +102,115 @@ __global__ void fractalKernel(FrameBuffer fb, f64 iTime)
     fb.Write(pixel, rgb);
 }
 
-__global__ void rayTracingKernel(FrameBuffer fb, Mesh* meshes, Material* mats, Texture* texs, Vec3 pos, Vec3 front, Vec3 up, u32 meshCount)
+__device__ HitRecord RayTrace(const Ray& r, const Mesh* meshes, const Material* mats, u32 meshCount, f32 far, const Material*& mat, bool inverted = false)
 {
-    u64 index = 1llu * threadIdx.x + blockIdx.x * blockDim.x;
-    if (index >= 1llu * fb.resolution.x * fb.resolution.y) return;
+    HitRecord result;
+    for (u32 i = 0; i < meshCount; ++i)
+    {
+        HitRecord hit = meshes[i].Intersect(r, Maths::Vec2(0.0f, far), inverted);
+        if (hit.dist < 0) continue;
+        far = hit.dist;
+        mat = mats + meshes[i].matIndex;
+        result = hit;
+        result.mesh = i;
+    }
+    return result;
+}
+
+__global__ void RayTracingKernel(FrameBuffer fb, const Mesh* meshes, const Material* mats, const Texture* texs, Vec3 pos, const Vec3 front, const Vec3 up, u32 meshCount)
+{
+    u64 index = threadIdx.x + static_cast<u64>(blockIdx.x) * blockDim.x;
+    if (index >= static_cast<u64>(fb.resolution.x) * fb.resolution.y) return;
+    Maths::IVec2 pixel = Maths::IVec2(index % fb.resolution.x, index / fb.resolution.x);
+    Maths::Vec2 coord = (Vec2(pixel) * 2 - fb.resolution) / fb.resolution.y;
+    Vec3 right = front.Cross(up);
+    Ray r = Ray(pos, right * coord.x + up * coord.y + front * 3.55f);
+    f32 far = 100000.0f;
+    Material* mat = nullptr;
+    Vec3 color;
+    f32 coef = 1.0f;
+    bool inverted = false;
+    HitRecord result;
+    u8 iterator = 0;
+    while (iterator < 8)
+    {
+        ++iterator;
+        result = RayTrace(r, meshes, mats, meshCount, far, mat, inverted);
+        if (result.dist < 0)
+        {
+            break;
+        }
+        Vec3 normal;
+        Vec3 tangent;
+        Vec3 bitangent;
+        Vec2 uv;
+        meshes[result.mesh].FillData(result, normal, tangent, bitangent, uv);
+        if (mat->normalTex != ~0)
+        {
+            Vec3 col = texs[mat->normalTex].Sample(uv).GetVector() * 2 - 1;
+            normal = (tangent * col.x + bitangent * col.y + normal * col.z).Normalize();
+        }
+        Vec3 diffuse = mat->diffuseTex != ~0 ? texs[mat->diffuseTex].Sample(uv).GetVector() : mat->diffuseColor;
+        f32 metallic = mat->metallicTex != ~0 ? texs[mat->metallicTex].Sample(uv).x : mat->metallic;
+        f32 roughness = mat->roughnessTex != ~0 ? texs[mat->roughnessTex].Sample(uv).x : mat->roughness;
+
+        color += diffuse * coef * (1 - metallic);
+        coef = metallic;
+        if (metallic == 0)
+        {
+            break;
+        }
+        far = 100000.0f;
+        r = Ray(result.pos, r.dir.Reflect(normal));
+    }
+    fb.Write(pixel, color);
+}
+
+__global__ void RayTracingKernelDebug(FrameBuffer fb, const Mesh* meshes, const Material* mats, const Texture* texs, Vec3 pos, const Vec3 front, const Vec3 up, u32 meshCount)
+{
+    u64 index = threadIdx.x + static_cast<u64>(blockIdx.x) * blockDim.x;
+    if (index >= static_cast<u64>(fb.resolution.x) * fb.resolution.y) return;
     Maths::IVec2 pixel = Maths::IVec2(index % fb.resolution.x, index / fb.resolution.x);
     Maths::Vec2 coord = (Vec2(pixel) * 2 - fb.resolution) / fb.resolution.y;
     Vec3 right = front.Cross(up);
     Ray r = Ray(pos, right * coord.x + up * coord.y + front * 2);
     f32 far = 100000.0f;
     Material* mat = nullptr;
-    HitRecord result;
-    for (u32 i = 0; i < meshCount; ++i)
+    HitRecord result = RayTrace(r, meshes, mats, meshCount, far, mat);
+    if (result.dist < 0)
     {
-        HitRecord hit = meshes[i].Intersect(r, Maths::Vec2(0.00001f, far));
-        if (hit.dist < 0) continue;
-        far = hit.dist;
-        mat = mats + meshes[i].matIndex;
-        result = hit;
+        fb.Write(pixel, Vec3());
+        return;
     }
-    //fb.Write(pixel, mat ? (mat->diffuseTex != ~0 ? texs[mat->diffuseTex].Sample(result.uv) : mat->diffuseColor) : Vec3());
-    fb.Write(pixel, mat ? (mat->metallicTex != ~0 ? texs[mat->metallicTex].Sample(result.uv) : Vec3(mat->metallic)) : Vec3());
+    Vec3 normal;
+    Vec3 tangent;
+    Vec3 bitangent;
+    Vec2 uv;
+    meshes[result.mesh].FillData(result, normal, tangent, bitangent, uv);
+    if (mat->normalTex != ~0)
+    {
+        Vec3 col = texs[mat->normalTex].Sample(uv).GetVector() * 2 - 1;
+        normal = (tangent * col.x + bitangent * col.y + normal * col.z).Normalize();
+    }
+    Vec3 diffuse = mat->diffuseTex != ~0 ? texs[mat->diffuseTex].Sample(uv).GetVector() : mat->diffuseColor;
+    const Vec3 lightDir = Vec3(1, -2, 0.5f).Normalize();
+    f32 pr = Util::Clamp(-lightDir.Dot(normal));
+    pr += 0.2f;
+    diffuse *= pr;
+    fb.Write(pixel, diffuse);
 }
 
-__global__ void verticeKernel(Mesh* meshes, u32 meshIndex, Vec3 pos, Quat rot, Vec3 scale)
+__global__ void VerticeKernel(Mesh* meshes, u32 meshIndex, Vec3 pos, Quat rot, Vec3 scale)
 {
-    u64 index = 1llu * threadIdx.x + blockIdx.x * blockDim.x;
+    u64 index = threadIdx.x + static_cast<u64>(blockIdx.x) * blockDim.x;
     Mesh* mesh = meshes + meshIndex;
     if (index < mesh->verticeCount)
     {
         mesh->transformedVertices[index].pos = pos + rot * mesh->sourceVertices[index].pos * scale;
         mesh->transformedVertices[index].normal = rot * mesh->sourceVertices[index].normal;
         mesh->transformedVertices[index].uv = mesh->sourceVertices[index].uv;
+        mesh->transformedVertices[index].tangent = rot * mesh->sourceVertices[index].tangent;
+        mesh->transformedVertices[index].cotangent = rot * mesh->sourceVertices[index].cotangent;
     }
     else if (index == mesh->verticeCount)
     {
@@ -178,9 +255,9 @@ void Kernel::RunKernels(u32* img, f64 iTime)
     u32 count = fb.resolution.x * fb.resolution.y;
     s32 M = CudaUtil::GetMaxThreads(deviceID);
 
-    fractalKernel<<<(count + M - 1) / M, M>>>(fb, iTime);
+    FractalKernel<<<(count + M - 1) / M, M>>>(fb, iTime);
 
-    CudaUtil::CheckError(cudaGetLastError(), "fractalKernel launch failed: %s");
+    CudaUtil::CheckError(cudaGetLastError(), "FractalKernel launch failed: %s");
     CudaUtil::SynchronizeDevice();
 
     CudaUtil::CopyFrameBuffer(fb, img, CudaUtil::CopyType::DToH);
@@ -190,19 +267,34 @@ void Kernel::UpdateMeshVertices(Mesh* mesh, u32 index, const Maths::Vec3& pos, c
 {
     u32 count = mesh->verticeCount + 1;
     s32 M = CudaUtil::GetMaxThreads(deviceID);
-    verticeKernel<<<(count + M - 1) / M, M>>>(device_meshes, index, pos, rot, scale);
-    CudaUtil::CheckError(cudaGetLastError(), "verticeKernel launch failed: %s");
+    VerticeKernel<<<(count + M - 1) / M, M>>>(device_meshes, index, pos, rot, scale);
+    CudaUtil::CheckError(cudaGetLastError(), "VerticeKernel launch failed: %s");
 }
 
+s32 M = 0;
 void Kernel::RenderMeshes(u32* img, u32 meshCount, Vec3 pos, Vec3 front, Vec3 up)
 {
     u32 count = fb.resolution.x * fb.resolution.y;
-    s32 M = CudaUtil::GetMaxThreads(deviceID);
-    M /= 2;
-
-    rayTracingKernel<<<(count + M - 1) / M, M>>>(fb, device_meshes, device_materials, device_textures, pos, front, up, meshCount);
-
-    CudaUtil::CheckError(cudaGetLastError(), "rayTracingKernel launch failed: %s");
+    if (M)
+    {
+        RayTracingKernel<<<(count + M - 1) / M, M>>>(fb, device_meshes, device_materials, device_textures, pos, front, up, meshCount);
+        CudaUtil::CheckError(cudaGetLastError(), "RayTracingKernelDebug launch failed: %s");
+    }
+    else
+    {
+        M = CudaUtil::GetMaxThreads(deviceID);
+        RayTracingKernelDebug<<<(count + M - 1) / M, M>>>(fb, device_meshes, device_materials, device_textures, pos, front, up, meshCount);
+        cudaError_t result = cudaGetLastError();
+        u32 counter = 0;
+        while (result != cudaSuccess && M > 16 && counter < 10)
+        {
+            M /= 2;
+            ++counter;
+            RayTracingKernelDebug<<<(count + M - 1) / M, M>>>(fb, device_meshes, device_materials, device_textures, pos, front, up, meshCount);
+            result = cudaGetLastError();
+        }
+        CudaUtil::CheckError(result, "Could not find adequate core number: %s");
+    }
     CudaUtil::SynchronizeDevice();
 
     CudaUtil::CopyFrameBuffer(fb, img, CudaUtil::CopyType::DToH);
