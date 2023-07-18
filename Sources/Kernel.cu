@@ -1,4 +1,7 @@
 ﻿#include "Kernel.cuh"
+
+#include <chrono>
+
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
@@ -7,6 +10,11 @@ using namespace RayTracing;
 
 #define MAX_ITER 2048
 #define FOV 3.55f
+
+__device__ f32 RandomUniform(curandState* globalState, u64 index)
+{
+    return curand_uniform(globalState + index);
+}
 
 __device__ void HSVtoRGB(Vec3& rgb, const Vec3& hsv)
 {
@@ -118,6 +126,49 @@ __device__ HitRecord RayTrace(const Ray& r, const Mesh* meshes, const Material* 
     return result;
 }
 
+__device__ Vec3 GetColor(Ray r, const Mesh* meshes, const Material* materials, const Texture* textures, u32 meshCount)
+{
+    f32 far = 100000.0f;
+    f32 coef = 1.0f;
+    Material* mat = nullptr;
+    Vec3 color;
+    bool inverted = false;
+    HitRecord result;
+    u8 iterator = 0;
+    while (iterator < 8)
+    {
+        ++iterator;
+        result = RayTrace(r, meshes, materials, meshCount, far, mat, inverted);
+        if (result.dist < 0)
+        {
+            break;
+        }
+        Vec3 normal;
+        Vec3 tangent;
+        Vec3 bitangent;
+        Vec2 uv;
+        meshes[result.mesh].FillData(result, normal, tangent, bitangent, uv);
+        if (mat->normalTex != ~0)
+        {
+            Vec3 col = textures[mat->normalTex].Sample(uv).GetVector() * 2 - 1;
+            normal = (tangent * col.x + bitangent * col.y + normal * col.z).Normalize();
+        }
+        Vec3 diffuse = mat->diffuseTex != ~0 ? textures[mat->diffuseTex].Sample(uv).GetVector() : mat->diffuseColor;
+        f32 metallic = mat->metallicTex != ~0 ? textures[mat->metallicTex].Sample(uv).x : mat->metallic;
+        f32 roughness = mat->roughnessTex != ~0 ? textures[mat->roughnessTex].Sample(uv).x : mat->roughness;
+        bool transmit = (mat->transmittanceColor.x + mat->transmittanceColor.y + mat->transmittanceColor.z) > 0;
+        if (metallic != 1)
+        {
+            // DIFFUSE LIGHT GOES HERE
+        }
+        color += diffuse * coef * (1 - metallic);
+        coef = metallic;
+        far = 100000.0f;
+        r = Ray(result.pos, r.dir.Reflect(normal));
+    }
+    return color;
+}
+
 __global__ void RayTracingKernel(FrameBuffer fb, const Mesh* meshes, const Material* mats, const Texture* texs, Vec3 pos, const Vec3 front, const Vec3 up, u32 meshCount)
 {
     u64 index = threadIdx.x + static_cast<u64>(blockIdx.x) * blockDim.x;
@@ -225,6 +276,12 @@ __global__ void VerticeKernel(Mesh* meshes, u32 meshIndex, Vec3 pos, Quat rot, V
     }
 }
 
+__global__ void SeedKernel(curandState* states, u64 seed)
+{
+    u64 index = threadIdx.x + static_cast<u64>(blockIdx.x) * blockDim.x;
+    curand_init(seed + index, 0, 0, states + index);
+}
+
 void Kernel::InitKernels(IVec2 resIn, s32 id)
 {
     if (id < 0)
@@ -237,16 +294,34 @@ void Kernel::InitKernels(IVec2 resIn, s32 id)
         CudaUtil::UseDevice(id);
     }
     CudaUtil::CreateFrameBuffer(fb, resIn);
+#ifdef RAY_TRACING
+    u64 newSize = static_cast<u64>(resIn.x) * resIn.y;
+    device_prngBuffer = CudaUtil::Allocate<curandState>(newSize);
+    rngBufferSize = newSize;
+    SeedRNGBuffer();
+#endif
+
 }
 
 void Kernel::Resize(IVec2 resIn)
 {
     CudaUtil::UnloadFrameBuffer(fb);
     CudaUtil::CreateFrameBuffer(fb, resIn);
+    u64 newSize = static_cast<u64>(resIn.x) * resIn.y;
+    if (newSize > rngBufferSize)
+    {
+        CudaUtil::Free(device_prngBuffer);
+        device_prngBuffer = CudaUtil::Allocate<curandState>(newSize);
+        rngBufferSize = newSize;
+        SeedRNGBuffer();
+    }
 }
 
 void Kernel::ClearKernels()
 {
+#ifdef RAY_TRACING
+    CudaUtil::Free(device_prngBuffer);
+#endif
     CudaUtil::UnloadFrameBuffer(fb);
     CudaUtil::ResetDevice();
 }
@@ -319,6 +394,14 @@ void Kernel::RenderMeshes(u32* img, u32 meshCount, Vec3 pos, Vec3 front, Vec3 up
     }
     CudaUtil::SynchronizeDevice();
     CudaUtil::CopyFrameBuffer(fb, img, CudaUtil::CopyType::DToH);
+}
+
+void Kernel::SeedRNGBuffer()
+{
+    s32 M = CudaUtil::GetMaxThreads(deviceID);
+    u64 seed = std::chrono::system_clock::now().time_since_epoch().count();
+    SeedKernel<<<((u32)rngBufferSize + M - 1) / M, M>>>(device_prngBuffer, seed);
+    CudaUtil::SynchronizeDevice();
 }
 
 void Kernel::UnloadMeshes(const std::vector<Mesh>& meshes)

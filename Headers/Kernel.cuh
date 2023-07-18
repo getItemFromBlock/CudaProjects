@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include "curand_kernel.h"
 #include "CudaUtil.hpp"
 #include "Maths/Maths.cuh"
 #include "RayTracing/Texture.cuh"
@@ -30,11 +31,14 @@ public:
 	void UnloadMeshes(const std::vector<RayTracing::Mesh>& meshes);
 	void UnloadTextures(const std::vector<RayTracing::Texture>& textures);
 	void UnloadMaterials();
+	void SeedRNGBuffer();
 
 private:
 	RayTracing::Mesh* device_meshes = nullptr;
 	RayTracing::Texture* device_textures = nullptr;
 	RayTracing::Material* device_materials = nullptr;
 	RayTracing::FrameBuffer fb;
+	curandState* device_prngBuffer = nullptr;
+	u64 rngBufferSize = 0;
 	s32 deviceID = 0;
 };
