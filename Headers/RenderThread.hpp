@@ -65,12 +65,13 @@ private:
 	std::vector<u32> colorBuffer;
 	std::vector<FrameHolder> queuedFrames;
 	std::vector<FrameHolder> bufferedFrames;
-	std::bitset<7> keys = 0;
+	std::bitset<9> keys = 0;
 	Maths::IVec2 res;
 	Maths::IVec2 storedRes;
 	Maths::Vec2 storedDelta;
 	Maths::Vec3 position = Maths::Vec3(-5.30251f, -6.38824f, 7.8891f);
 	Maths::Vec2 rotation = Maths::Vec2(1.059891f - static_cast<f32>(M_PI_2), -0.584459f + static_cast<f32>(M_PI));
+	f32 fov = 3.55f;
 	Parameters params;
 	s32 threadID = -1;
 	f32 elapsedTime = 0;

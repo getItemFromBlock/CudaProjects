@@ -202,6 +202,12 @@ void RenderThread::RayTracingRealTime()
 	kernels.LoadTextures(textures);
 	kernels.LoadMaterials(materials);
 	kernels.LoadMeshes(meshes);
+
+	for (u32 i = 0; i < meshes.size(); ++i)
+	{
+		kernels.UpdateMeshVertices(&meshes[i], i, Vec3(0, 0, 0), Quat::AxisAngle(Vec3(1, 0, 0), static_cast<f32>(M_PI)), Vec3(1));
+	}
+	kernels.Synchronize();
 	f64 last = 0;
 	while (!exit.Load())
 	{
@@ -219,29 +225,25 @@ void RenderThread::RayTracingRealTime()
 		delta *= 0.005f;
 		rotation.x = Util::Clamp(rotation.x + delta.y, static_cast<f32>(-M_PI_2), static_cast<f32>(M_PI_2));
 		rotation.y = Util::Mod(rotation.y + delta.x, static_cast<f32>(2 * M_PI));
-		Quat q = Quat::FromEuler(Vec3(rotation.x, rotation.y, 0.0f));
 		Maths::Vec3 dir;
 		keyLock.lock();
 		for (u8 i = 0; i < 6; ++i)
 		{
 			dir[i % 3] += (i > 2) ? -static_cast<f32>(keys.test(i)) : static_cast<f32>(keys.test(i));
 		}
-		bool advanced = keys.test(6);
+		f32 fovDir = static_cast<f32>(keys.test(6)) - static_cast<f32>(keys.test(7));
+		bool advanced = keys.test(8);
 		keyLock.unlock();
+		fov = Util::Clamp(fov + fovDir * deltaTime * fov, 0.5f, 100.0f);
+		Quat q = Quat::FromEuler(Vec3(rotation.x, rotation.y, 0.0f));
 		if (dir.Dot())
 		{
 			dir = dir.Normalize() * deltaTime * 10;
 			position += q * dir;
 		}
 		HandleResize();
-		for (u32 i = 0; i < meshes.size(); ++i)
-		{
-			kernels.UpdateMeshVertices(&meshes[i], i, Vec3(0, 0, 0), Quat::AxisAngle(Vec3(1, 0, 0), static_cast<f32>(M_PI)), Vec3(1));
-		}
-		kernels.Synchronize();
-		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), position, q * Vec3(0,0,1), q * Vec3(0,1,0), advanced);
+		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), position, q * Vec3(0,0,1), q * Vec3(0,1,0), fov, advanced);
 		CopyToScreen();
-		//std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 	kernels.UnloadTextures(textures);
 	kernels.UnloadMaterials();
@@ -251,5 +253,64 @@ void RenderThread::RayTracingRealTime()
 
 void RenderThread::RayTracingFrames()
 {
-	// TODO
+	std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
+	auto start = now.time_since_epoch();
+	InitThread();
+	std::vector<Texture> textures;
+	std::vector<Material> materials;
+	std::vector<Mesh> meshes;
+	ModelLoader::LoadModel(meshes, materials, textures, "Assets/scene1.obj");
+
+	for (u32 i = 0; i < meshes.size(); ++i)
+	{
+		kernels.UpdateMeshVertices(&meshes[i], i, Vec3(0, 0, 0), Quat::AxisAngle(Vec3(1, 0, 0), static_cast<f32>(M_PI)), Vec3(1));
+	}
+	kernels.Synchronize();
+
+	u64 frame = static_cast<u64>(params.startFrame) + threadID;
+	f64 iTime = 1.0 / params.targetFPS * frame;
+	const s32 count = CudaUtil::GetDevicesCount();
+	while (iTime < LENGTH && !exit.Load())
+	{
+		Quat q = Quat::FromEuler(Vec3(rotation.x, rotation.y, 0.0f));
+		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), position, q * Vec3(0, 0, 1), q * Vec3(0, 1, 0), fov, true);
+
+		FrameHolder fr;
+		fr.frameData = colorBuffer;
+		fr.frameID = frame;
+		bufferedFrames.push_back(fr);
+		if (queueLock.Load())
+		{
+			queuedFrames = bufferedFrames;
+			bufferedFrames.clear();
+			queueLock.Store(false);
+		}
+		frame += count;
+		iTime += 1.0 * count / params.targetFPS;
+	}
+	if (!bufferedFrames.empty())
+	{
+		while (!queueLock.Load())
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		}
+		queuedFrames = bufferedFrames;
+		bufferedFrames.clear();
+		queueLock.Store(false);
+	}
+
+	kernels.LoadTextures(textures);
+	kernels.LoadMaterials(materials);
+	kernels.LoadMeshes(meshes);
+
+	kernels.UnloadTextures(textures);
+	kernels.UnloadMaterials();
+	kernels.UnloadMeshes(meshes);
+	kernels.ClearKernels();
+
+	now = std::chrono::system_clock::now();
+	auto duration = now.time_since_epoch() - start;
+	auto micros = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
+	elapsedTime = micros / 1000000.0f;
+	exit.Store(true);
 }

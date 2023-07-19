@@ -27,7 +27,7 @@ public:
 	void LoadMaterials(const std::vector<RayTracing::Material> materials);
 	void UpdateMeshVertices(RayTracing::Mesh* mesh, u32 index, const Maths::Vec3& pos, const Maths::Quat& rot, const Maths::Vec3& scale);
 	void Synchronize();
-	void RenderMeshes(u32* img, u32 meshCount, Maths::Vec3 pos, Maths::Vec3 front, Maths::Vec3 up, bool advanced);
+	void RenderMeshes(u32* img, const u32 meshCount, const Maths::Vec3& pos, const Maths::Vec3& front, const Maths::Vec3& up, const f32 fov, const bool advanced);
 	void UnloadMeshes(const std::vector<RayTracing::Mesh>& meshes);
 	void UnloadTextures(const std::vector<RayTracing::Texture>& textures);
 	void UnloadMaterials();
@@ -41,4 +41,6 @@ private:
 	curandState* device_prngBuffer = nullptr;
 	u64 rngBufferSize = 0;
 	s32 deviceID = 0;
+
+	void LaunchRTXKernels(const u32 meshCount, const Maths::Vec3& pos, const Maths::Vec3& front, const Maths::Vec3& up, const f32 fov, const bool advanced);
 };

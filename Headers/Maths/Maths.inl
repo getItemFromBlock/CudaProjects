@@ -624,6 +624,14 @@ namespace Maths
         return operator-(normal * (2 * Dot(normal)));
     }
 
+    inline Vec3 Vec3::Refract(const Vec3& normal, f32 ior)
+    {
+        f32 cosi = Dot(normal);
+        f32 cost2 = 1 - ior * ior * (1 - cosi * cosi);
+        if (cost2 <= 0) return Vec3();
+        return (operator*(ior) - normal * (ior * cosi + sqrtf(cost2))).Normalize();
+    }
+
     inline bool Vec3::IsCollinearWith(Vec3 a) const
     {
         f32 res = Dot(a);
@@ -643,6 +651,11 @@ namespace Maths
     inline Vec3 Vec3::Negate() const
     {
         return operator*(-1);
+    }
+
+    inline Vec3 Vec3::GetPerpendicular() const
+    {
+        return Vec3(copysignf(z, x), copysignf(z, y), -copysignf(x, z) - copysignf(y, z));
     }
 
     inline bool Vec3::IsIntEquivalent(Vec3 a) const

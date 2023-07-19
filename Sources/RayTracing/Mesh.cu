@@ -22,13 +22,23 @@ __device__ HitRecord Mesh::Intersect(Ray r, Vec2 bounds, bool inverted) const
     return result;
 }
 
-__device__ void Mesh::FillData(const HitRecord& res, Vec3& normal, Vec3& tangent, Vec3& cotangent, Vec2& uv) const
+__device__ const u32 indexes[6] =
+{
+    2,
+    0,
+    1,
+    2,
+    1,
+    0
+};
+
+__device__ void Mesh::FillData(const HitRecord& res, Vec3& normal, Vec3& tangent, Vec3& cotangent, Vec2& uv, const bool inverted) const
 {
     if (res.indice >= indiceCount) return;
     for (u32 i = 0; i < 3; ++i)
     {
         Vertice& vert = transformedVertices[indices[res.indice + i]];
-        u32 j = i ? i - 1 : 2;
+        u32 j = inverted ? indexes[i + 3] : indexes[i];
         normal += vert.normal * res.barycentric[j];
         uv += vert.uv * res.barycentric[j];
         if (i == 0)

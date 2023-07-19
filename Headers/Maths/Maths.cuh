@@ -302,6 +302,8 @@ namespace Maths
 
         CUDA_FUNCTION inline Vec3 Reflect(const Vec3& normal);
 
+        CUDA_FUNCTION inline Vec3 Refract(const Vec3& normal, f32 ior);
+
         // Return tue if 'a' and 'b' are collinears (Precision defined by VEC_COLLINEAR_PRECISION)
         CUDA_FUNCTION inline bool IsCollinearWith(Vec3 a) const;
 
@@ -316,6 +318,9 @@ namespace Maths
 
         // Return a vector of length 'in' and with an opposite direction
         CUDA_FUNCTION inline Vec3 Negate() const;
+
+        // Found this here: https://math.stackexchange.com/q/4112622
+        CUDA_FUNCTION inline Vec3 GetPerpendicular() const;
 
         // return true if 'a' converted to s32 is equivalent to 'in' converted to s32
         CUDA_FUNCTION inline bool IsIntEquivalent(Vec3 a) const;
