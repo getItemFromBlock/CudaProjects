@@ -25,7 +25,7 @@ __device__ Vec3 Deviate(curandState* const globalState, const u64 index, const V
     if (amount == 0) return dir;
     Vec3 tang = dir.GetPerpendicular().Normalize();
     Vec3 cotang = dir.Cross(tang);
-    return (tang * (RandomUniform2(globalState, index) * amount) + cotang * (RandomUniform2(globalState, index) * amount) + dir * RandomUniform(globalState, index)).Normalize();
+    return (tang * (RandomUniform2(globalState, index) * amount) + cotang * (RandomUniform2(globalState, index) * amount) + dir * (RandomUniform(globalState, index) * (1 - amount))).Normalize();
 }
 
 __device__ void HSVtoRGB(Vec3& rgb, const Vec3& hsv)
@@ -152,7 +152,7 @@ __device__ Vec3 GetColor(Ray r, curandState* const globalState, const u64 index,
         result = RayTrace(r, meshes, materials, meshCount, far, mat, inverted);
         if (result.dist < 0)
         {
-            color *= Vec3(0.2f);
+            if (iterator == 1) color *= Vec3(0.2f);
             break;
         }
         Vec3 normal;
@@ -168,14 +168,14 @@ __device__ Vec3 GetColor(Ray r, curandState* const globalState, const u64 index,
         Vec3 diffuse = mat->diffuseTex != ~0 ? textures[mat->diffuseTex].Sample(uv).GetVector() : mat->diffuseColor;
         f32 metallic = mat->metallicTex != ~0 ? textures[mat->metallicTex].Sample(uv).x : mat->metallic;
         f32 roughness = mat->roughnessTex != ~0 ? textures[mat->roughnessTex].Sample(uv).x : mat->roughness;
+        roughness = roughness * roughness * roughness;
         f32 transmit = (mat->transmittanceColor.x + mat->transmittanceColor.y + mat->transmittanceColor.z) / 3;
         if (RandomUniform(globalState, index) > (metallic + transmit) / 2)
         {
             r.pos = result.pos + r.dir * 0.00001f;
-            if (transmit > 0 && RandomUniform(globalState, index) > transmit)
+            if (transmit > 0 && RandomUniform(globalState, index) < transmit)
             {
-                inverted = !inverted;
-                if (inverted)
+                if (!inverted)
                 {
                     Vec3 dir =  r.dir.Refract(normal, 1/mat->ior);
                     if (dir.x != 0 || dir.y != 0 || dir.z != 0)
@@ -187,11 +187,10 @@ __device__ Vec3 GetColor(Ray r, curandState* const globalState, const u64 index,
                     {
                         r.dir = Deviate(globalState, index, r.dir.Reflect(normal), roughness);
                     }
-                    color *= diffuse * mat->transmittanceColor + mat->emissionColor;
+                    color = color * diffuse * mat->transmittanceColor + mat->emissionColor;
                 }
                 else
                 {
-                    normal.y = -normal.y;
                     Vec3 dir = r.dir.Refract(-normal, mat->ior);
                     if (dir.x != 0 || dir.y != 0 || dir.z != 0)
                     {
@@ -207,7 +206,7 @@ __device__ Vec3 GetColor(Ray r, curandState* const globalState, const u64 index,
             else
             {
                 r.dir = Deviate(globalState, index, r.dir.Reflect(normal), roughness);
-                color *= diffuse + mat->emissionColor;
+                color = color * diffuse + mat->emissionColor;
             }
             if (mat->emissionColor.x > 0) break;
             far = 100000.0f;
@@ -216,12 +215,12 @@ __device__ Vec3 GetColor(Ray r, curandState* const globalState, const u64 index,
         {
             r.pos = result.pos;
             r.dir = Deviate(globalState, index, r.dir.Reflect(normal), roughness);
-            color *= diffuse + mat->emissionColor;
+            color = color * diffuse + mat->emissionColor;
             if (mat->emissionColor.x > 0) break;
             far = 100000.0f;
         }
     }
-    return color;
+    return Util::Clamp(color);
 }
 
 __global__ void RayTracingKernel(FrameBuffer fb, curandState* const globalState, const Mesh* meshes, const Material* mats, const Texture* texs, Vec3 pos, const Vec3 front, const Vec3 up, const f32 fov, const u32 meshCount, const u32 quality)
@@ -231,7 +230,7 @@ __global__ void RayTracingKernel(FrameBuffer fb, curandState* const globalState,
     Maths::IVec2 pixel = Maths::IVec2(index % fb.resolution.x, index / fb.resolution.x);
     Maths::Vec2 coord = (Vec2(pixel) * 2 - fb.resolution) / fb.resolution.y;
     Vec3 right = front.Cross(up);
-    Ray r = Ray(pos, right * coord.x + up * coord.y + front * fov);
+    Ray r = Ray(pos, right * coord.x - up * coord.y + front * fov);
     Vec3 color;
     for (u32 i = 0; i < quality; ++i)
     {
@@ -247,7 +246,7 @@ __global__ void RayTracingKernelDebug(FrameBuffer fb, const Mesh* meshes, const 
     Maths::IVec2 pixel = Maths::IVec2(index % fb.resolution.x, index / fb.resolution.x);
     Maths::Vec2 coord = (Vec2(pixel) * 2 - fb.resolution) / fb.resolution.y;
     Vec3 right = front.Cross(up);
-    Ray r = Ray(pos, right * coord.x + up * coord.y + front * fov);
+    Ray r = Ray(pos, right * coord.x - up * coord.y + front * fov);
     f32 far = 100000.0f;
     Vec3 color = Vec3(1);
     Material* mat = nullptr;
@@ -259,7 +258,7 @@ __global__ void RayTracingKernelDebug(FrameBuffer fb, const Mesh* meshes, const 
         HitRecord result = RayTrace(r, meshes, mats, meshCount, far, mat, inverted);
         if (result.dist < 0)
         {
-            if (iterator == 0) color *= Vec3(0.2f);
+            if (iterator == 1) color *= Vec3(0.2f);
             break;
         }
         Vec3 normal;
@@ -281,7 +280,6 @@ __global__ void RayTracingKernelDebug(FrameBuffer fb, const Mesh* meshes, const 
             r.pos = result.pos + r.dir * 0.00001f;
             if (transmit > 0)
             {
-                    normal.y = -normal.y;
                 if (!inverted)
                 {
                     Vec3 dir = r.dir.Refract(normal, 1 / mat->ior);

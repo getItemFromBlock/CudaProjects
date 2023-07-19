@@ -134,7 +134,7 @@ void SetKeyState(WPARAM wParam, bool pressed)
     case 'A':
         th.SetKeyState(0, pressed);
         break;
-    case 'Q':
+    case 'E':
         th.SetKeyState(1, pressed);
         break;
     case 'W':
@@ -143,7 +143,7 @@ void SetKeyState(WPARAM wParam, bool pressed)
     case 'D':
         th.SetKeyState(3, pressed);
         break;
-    case 'E':
+    case 'Q':
         th.SetKeyState(4, pressed);
         break;
     case 'S':

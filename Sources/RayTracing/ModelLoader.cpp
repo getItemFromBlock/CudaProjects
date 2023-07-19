@@ -211,7 +211,6 @@ void LoadMeshes(std::vector<Mesh>& meshes, u64 matDelta, std::vector<tinyobj::sh
                     if (tr.data[j].norm >= 0)
                     {
                         data.vertices.back().normal = GetVec3(tr.data[j].norm, attributes.normals);
-                        data.vertices.back().normal.y = -data.vertices.back().normal.y;
                     }
                     else
                     {

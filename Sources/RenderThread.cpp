@@ -205,7 +205,7 @@ void RenderThread::RayTracingRealTime()
 
 	for (u32 i = 0; i < meshes.size(); ++i)
 	{
-		kernels.UpdateMeshVertices(&meshes[i], i, Vec3(0, 0, 0), Quat::AxisAngle(Vec3(1, 0, 0), static_cast<f32>(M_PI)), Vec3(1));
+		kernels.UpdateMeshVertices(&meshes[i], i, Vec3(0, 0, 0), Quat(), Vec3(1));
 	}
 	kernels.Synchronize();
 	f64 last = 0;
@@ -223,7 +223,7 @@ void RenderThread::RayTracingRealTime()
 		storedDelta = Vec2();
 		mouseLock.unlock();
 		delta *= 0.005f;
-		rotation.x = Util::Clamp(rotation.x + delta.y, static_cast<f32>(-M_PI_2), static_cast<f32>(M_PI_2));
+		rotation.x = Util::Clamp(rotation.x - delta.y, static_cast<f32>(-M_PI_2), static_cast<f32>(M_PI_2));
 		rotation.y = Util::Mod(rotation.y + delta.x, static_cast<f32>(2 * M_PI));
 		Maths::Vec3 dir;
 		keyLock.lock();
@@ -263,7 +263,7 @@ void RenderThread::RayTracingFrames()
 
 	for (u32 i = 0; i < meshes.size(); ++i)
 	{
-		kernels.UpdateMeshVertices(&meshes[i], i, Vec3(0, 0, 0), Quat::AxisAngle(Vec3(1, 0, 0), static_cast<f32>(M_PI)), Vec3(1));
+		kernels.UpdateMeshVertices(&meshes[i], i, Vec3(0, 0, 0), Quat(), Vec3(1));
 	}
 	kernels.Synchronize();
 
