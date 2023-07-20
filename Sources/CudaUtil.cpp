@@ -175,12 +175,12 @@ bool CudaUtil::UnloadTexture(const Texture& tex)
     return true;
 }
 
-bool CudaUtil::CreateFrameBuffer(FrameBuffer& tex, Maths::IVec2 res)
+bool CudaUtil::CreateFrameBuffer(FrameBuffer& tex, Maths::IVec2 res, ChannelType type)
 {
     if (res.x <= 0 || res.y <= 0) return false;
     tex.resolution = res;
-    const s32 fsize = sizeof(u8) * 8;
-    cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(fsize, fsize, fsize, fsize, cudaChannelFormatKindUnsigned);
+    const s32 fsize = (type == ChannelType::F32 ? sizeof(f32) : sizeof(u8)) * 8;
+    cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(fsize, fsize, fsize, fsize, type == ChannelType::F32 ? cudaChannelFormatKindFloat : cudaChannelFormatKindUnsigned);
     CheckError(cudaMallocArray(&tex.device_data, &channelDesc, tex.resolution.x, tex.resolution.y, cudaArraySurfaceLoadStore));
     struct cudaResourceDesc resDesc;
     memset(&resDesc, 0, sizeof(resDesc));

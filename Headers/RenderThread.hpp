@@ -18,6 +18,7 @@
 #include "Maths/Maths.cuh"
 
 #define LENGTH 34.90658503988659
+#define LENGTH2 0.0001
 /*
 // 4K
 #define WIDTH 3840

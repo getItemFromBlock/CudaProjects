@@ -111,7 +111,7 @@ void RenderThread::RunKernels()
 	auto duration = now.time_since_epoch() - start;
 	auto micros = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
 	f64 iTime = micros / 1000000.0;
-	kernels.RunKernels(colorBuffer.data(), iTime);
+	kernels.RunFractalKernels(colorBuffer.data(), iTime);
 }
 
 void RenderThread::HandleResize()
@@ -159,7 +159,7 @@ void RenderThread::MandelbrotFrames()
 	const s32 count = CudaUtil::GetDevicesCount();
 	while (iTime < LENGTH && !exit.Load())
 	{
-		kernels.RunKernels(colorBuffer.data(), iTime);
+		kernels.RunFractalKernels(colorBuffer.data(), iTime);
 		FrameHolder fr;
 		fr.frameData = colorBuffer;
 		fr.frameID = frame;
@@ -242,7 +242,7 @@ void RenderThread::RayTracingRealTime()
 			position += q * dir;
 		}
 		HandleResize();
-		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), position, q * Vec3(0,0,1), q * Vec3(0,1,0), fov, advanced);
+		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), position, q * Vec3(0,0,1), q * Vec3(0,1,0), fov, 16, advanced);
 		CopyToScreen();
 	}
 	kernels.UnloadTextures(textures);
@@ -270,10 +270,10 @@ void RenderThread::RayTracingFrames()
 	u64 frame = static_cast<u64>(params.startFrame) + threadID;
 	f64 iTime = 1.0 / params.targetFPS * frame;
 	const s32 count = CudaUtil::GetDevicesCount();
-	while (iTime < LENGTH && !exit.Load())
+	while (iTime < LENGTH2 && !exit.Load())
 	{
 		Quat q = Quat::FromEuler(Vec3(rotation.x, rotation.y, 0.0f));
-		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), position, q * Vec3(0, 0, 1), q * Vec3(0, 1, 0), fov, true);
+		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), position, q * Vec3(0, 0, 1), q * Vec3(0, 1, 0), fov, 1024, true);
 
 		FrameHolder fr;
 		fr.frameData = colorBuffer;

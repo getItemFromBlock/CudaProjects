@@ -8,6 +8,7 @@ namespace RayTracing
 {
 	class Texture;
 	class FrameBuffer;
+	enum class ChannelType : u8;
 }
 
 namespace CudaUtil
@@ -37,7 +38,7 @@ namespace CudaUtil
 	void PrintDevicesName();
 	bool LoadTexture(RayTracing::Texture& tex, const std::string& path);
 	bool UnloadTexture(const RayTracing::Texture& tex);
-	bool CreateFrameBuffer(RayTracing::FrameBuffer& tex, Maths::IVec2 res);
+	bool CreateFrameBuffer(RayTracing::FrameBuffer& tex, Maths::IVec2 res, RayTracing::ChannelType type);
 	bool UnloadFrameBuffer(const RayTracing::FrameBuffer& tex);
 
 	template<typename T>

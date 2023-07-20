@@ -19,7 +19,7 @@ public:
 	void InitKernels(Maths::IVec2 res, s32 deviceID);
 	void Resize(Maths::IVec2 newRes);
 	void ClearKernels();
-	void RunKernels(u32* img, f64 iTime);
+	void RunFractalKernels(u32* img, f64 iTime);
 
 	// Ray tracing specific functions start here
 	void LoadMeshes(const std::vector<RayTracing::Mesh> meshes);
@@ -27,7 +27,7 @@ public:
 	void LoadMaterials(const std::vector<RayTracing::Material> materials);
 	void UpdateMeshVertices(RayTracing::Mesh* mesh, u32 index, const Maths::Vec3& pos, const Maths::Quat& rot, const Maths::Vec3& scale);
 	void Synchronize();
-	void RenderMeshes(u32* img, const u32 meshCount, const Maths::Vec3& pos, const Maths::Vec3& front, const Maths::Vec3& up, const f32 fov, const bool advanced);
+	void RenderMeshes(u32* img, const u32 meshCount, const Maths::Vec3& pos, const Maths::Vec3& front, const Maths::Vec3& up, const f32 fov, const u32 quality, const bool advanced);
 	void UnloadMeshes(const std::vector<RayTracing::Mesh>& meshes);
 	void UnloadTextures(const std::vector<RayTracing::Texture>& textures);
 	void UnloadMaterials();
@@ -37,10 +37,11 @@ private:
 	RayTracing::Mesh* device_meshes = nullptr;
 	RayTracing::Texture* device_textures = nullptr;
 	RayTracing::Material* device_materials = nullptr;
-	RayTracing::FrameBuffer fb;
+	RayTracing::FrameBuffer surfaceFB;
+	RayTracing::FrameBuffer mainFB;
 	curandState* device_prngBuffer = nullptr;
 	u64 rngBufferSize = 0;
 	s32 deviceID = 0;
 
-	void LaunchRTXKernels(const u32 meshCount, const Maths::Vec3& pos, const Maths::Vec3& front, const Maths::Vec3& up, const f32 fov, const bool advanced);
+	void LaunchRTXKernels(const u32 meshCount, const Maths::Vec3& pos, const Maths::Vec3& front, const Maths::Vec3& up, const f32 fov, const u32 quality, const bool advanced);
 };
