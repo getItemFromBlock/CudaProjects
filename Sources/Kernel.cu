@@ -151,8 +151,7 @@ __device__ Vec3 GetColor(Ray r, curandState* const globalState, const u64 index,
         result = RayTrace(r, meshes, materials, meshCount, far, mat, inverted);
         if (result.dist < 0)
         {
-            if (iterator == 1) color *= Vec3(0.2f);
-            else color *= Vec3(0.2f);
+            color *= Vec3(0.2f);
             break;
         }
         Vec3 normal;
@@ -214,7 +213,7 @@ __device__ Vec3 GetColor(Ray r, curandState* const globalState, const u64 index,
         }
         else
         {
-            if (mat->emissionColor.x > 0) return (color * mat->emissionColor);
+            if (mat->emissionColor.x > 0) return color * mat->emissionColor;
             color *= diffuse;
             r.pos = result.pos;
             if (RandomUniform(globalState, index) > 0.5f)
@@ -229,7 +228,7 @@ __device__ Vec3 GetColor(Ray r, curandState* const globalState, const u64 index,
             far = 100000.0f;
         }
     }
-    return Util::Clamp(color);
+    return color;
 }
 
 __global__ void RayTracingKernel(FrameBuffer fb, curandState* const globalState, const Mesh* meshes, const Material* mats, const Texture* texs, Vec3 pos, const Vec3 front, const Vec3 up, const f32 fov, const u32 meshCount)
@@ -245,16 +244,17 @@ __global__ void RayTracingKernel(FrameBuffer fb, curandState* const globalState,
     {
         color += GetColor(r, globalState, index, meshes, mats, texs, meshCount);
     }
-    fb.Write(pixel, color);
+    fb.Write(pixel, fb.SampleVec(pixel) + Vec4(color, 1.0f));
 }
 
 // WARNING: The two framebuffers MUST have the same resolution
-__global__ void CopyKernel(const FrameBuffer source, FrameBuffer destination, const f32 colorMultiplier)
+__global__ void CopyKernel(const FrameBuffer source, FrameBuffer destination, const f32 colorMultiplier, const bool invertColor)
 {
     u64 index = threadIdx.x + static_cast<u64>(blockIdx.x) * blockDim.x;
     if (index >= static_cast<u64>(source.resolution.x) * source.resolution.y) return;
     Maths::IVec2 pixel = Maths::IVec2(index % source.resolution.x, index / source.resolution.x);
-    destination.Write(pixel, source.SampleVec(pixel) * colorMultiplier);
+    Vec4 c = source.SampleVec(pixel) * colorMultiplier;
+    destination.Write(pixel, invertColor ? Vec4(c.z, c.y, c.x, c.w) : c);
 }
 
 __global__ void ClearKernel(FrameBuffer fb, const Vec4 color)
@@ -458,17 +458,18 @@ void Kernel::UpdateMeshVertices(Mesh* mesh, u32 index, const Maths::Vec3& pos, c
 }
 
 s32 M = 0;
-void Kernel::LaunchRTXKernels(const u32 meshCount, const Vec3& pos, const Vec3& front, const Vec3& up, const f32 fov, const u32 quality, const bool advanced)
+void Kernel::LaunchRTXKernels(const u32 meshCount, const Vec3& pos, const Vec3& front, const Vec3& up, const f32 fov, const u32 quality, const LaunchParams params)
 {
     const u32 count = mainFB.resolution.x * mainFB.resolution.y;
-    if (advanced)
+    if (params & ADVANCED)
     {
         ClearKernel<<<(count + M - 1) / M, M>>>(mainFB, Vec4());
         for (u32 i = 0; i < quality; ++i)
         {
             RayTracingKernel<<<(count + M - 1) / M, M>>>(mainFB, device_prngBuffer, device_meshes, device_materials, device_textures, pos, front, up, fov, meshCount);
+            CudaUtil::SynchronizeDevice();
         }
-        CopyKernel<<<(count + M - 1) / M, M>>>(mainFB, surfaceFB, 1.0f/(16*quality));
+        CopyKernel<<<(count + M - 1) / M, M>>>(mainFB, surfaceFB, 1.0f/(16*quality), params & INVERTED_RB);
     }
     else
     {
@@ -476,24 +477,24 @@ void Kernel::LaunchRTXKernels(const u32 meshCount, const Vec3& pos, const Vec3& 
     }
 }
 
-void Kernel::RenderMeshes(u32* img, const u32 meshCount, const Vec3& pos, const Vec3& front, const Vec3& up, const f32 fov, const u32 quality, const bool advanced)
+void Kernel::RenderMeshes(u32* img, const u32 meshCount, const Vec3& pos, const Vec3& front, const Vec3& up, const f32 fov, const u32 quality, const LaunchParams params)
 {
     if (M)
     {
-        LaunchRTXKernels(meshCount, pos, front, up, fov, advanced, quality);
+        LaunchRTXKernels(meshCount, pos, front, up, fov, quality, params);
         CudaUtil::CheckError(cudaGetLastError(), "RayTracingKernelDebug launch failed: %s");
     }
     else
     {
         M = CudaUtil::GetMaxThreads(deviceID);
-        LaunchRTXKernels(meshCount, pos, front, up, fov, advanced, quality);
+        LaunchRTXKernels(meshCount, pos, front, up, fov, quality, params);
         cudaError_t result = cudaGetLastError();
         u32 counter = 0;
         while (result != cudaSuccess && M > 16 && counter < 10)
         {
             M /= 2;
             ++counter;
-            LaunchRTXKernels(meshCount, pos, front, up, fov, advanced, quality);
+            LaunchRTXKernels(meshCount, pos, front, up, fov, quality, params);
             result = cudaGetLastError();
         }
         CudaUtil::CheckError(result, "Could not find adequate core number: %s");

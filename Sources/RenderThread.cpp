@@ -242,7 +242,7 @@ void RenderThread::RayTracingRealTime()
 			position += q * dir;
 		}
 		HandleResize();
-		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), position, q * Vec3(0,0,1), q * Vec3(0,1,0), fov, 16, advanced);
+		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), position, q * Vec3(0,0,1), q * Vec3(0,1,0), fov, 1, advanced ? ADVANCED : NONE);
 		CopyToScreen();
 	}
 	kernels.UnloadTextures(textures);
@@ -261,6 +261,10 @@ void RenderThread::RayTracingFrames()
 	std::vector<Mesh> meshes;
 	ModelLoader::LoadModel(meshes, materials, textures, "Assets/scene1.obj");
 
+	kernels.LoadTextures(textures);
+	kernels.LoadMaterials(materials);
+	kernels.LoadMeshes(meshes);
+
 	for (u32 i = 0; i < meshes.size(); ++i)
 	{
 		kernels.UpdateMeshVertices(&meshes[i], i, Vec3(0, 0, 0), Quat(), Vec3(1));
@@ -273,7 +277,7 @@ void RenderThread::RayTracingFrames()
 	while (iTime < LENGTH2 && !exit.Load())
 	{
 		Quat q = Quat::FromEuler(Vec3(rotation.x, rotation.y, 0.0f));
-		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), position, q * Vec3(0, 0, 1), q * Vec3(0, 1, 0), fov, 1024, true);
+		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), position, q * Vec3(0, 0, 1), q * Vec3(0, 1, 0), fov, params.quality, static_cast<LaunchParams>(ADVANCED | INVERTED_RB));
 
 		FrameHolder fr;
 		fr.frameData = colorBuffer;
@@ -298,10 +302,6 @@ void RenderThread::RayTracingFrames()
 		bufferedFrames.clear();
 		queueLock.Store(false);
 	}
-
-	kernels.LoadTextures(textures);
-	kernels.LoadMaterials(materials);
-	kernels.LoadMeshes(meshes);
 
 	kernels.UnloadTextures(textures);
 	kernels.UnloadMaterials();

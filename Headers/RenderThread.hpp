@@ -30,6 +30,7 @@ struct Parameters
 	Maths::IVec2 targetResolution = Maths::IVec2(1920, 1080);
 	s32 targetFPS = 30;
 	s32 startFrame = 0;
+	s32 quality = 16;
 };
 
 struct FrameHolder

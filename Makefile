@@ -50,6 +50,8 @@ INC_DIR = Headers
 # Target executable name:
 EXE = mandelbrot
 
+EXE2 = ray-tracing
+
 # Object files:
 OBJS = $(OBJ_DIR)/Main.o
 OBJS += $(OBJ_DIR)/CudaUtil.o
@@ -58,18 +60,34 @@ OBJS += $(OBJ_DIR)/Kernel.o
 OBJS += $(OBJ_DIR)/RenderThread.o
 OBJS += $(OBJ_DIR)/Signal.o
 OBJS += $(OBJ_DIR)/Maths/Maths.o
+OBJS += $(OBJ_DIR)/RayTracing/FrameBuffer.o
+OBJS += $(OBJ_DIR)/RayTracing/Mesh.o
+OBJS += $(OBJ_DIR)/RayTracing/ModelLoader.o
+OBJS += $(OBJ_DIR)/RayTracing/RayTracing.o
+OBJS += $(OBJ_DIR)/RayTracing/Texture.o
 
 ##########################################################
 
 ## Compile ##
 
+all :
+    $(EXE) $(EXE2) clean
+
 # Link c++ and CUDA compiled object files to target executable:
 $(EXE) : $(OBJS)
 	$(CC) $(CC_FLAGS) $(OBJS) -o $@ $(CUDA_INC_DIR) $(CUDA_LIB_DIR) $(CUDA_LINK_LIBS)
 
+$(EXE2) :
+	CC_FLAGS += -DRAY_TRACING
+	make rtx
+	
+	
+rtx: $(OBJS)
+	$(CC) $(CC_FLAGS) $(OBJS) -o $@ $(CUDA_INC_DIR) $(CUDA_LIB_DIR) $(CUDA_LINK_LIBS)
+
 # Compile main .cpp file to object files:
 $(OBJ_DIR)/Main.o : $(SRC_DIR)/Main.cpp
-	mkdir -p bin/Maths
+	mkdir -p bin/Maths bin/RayTracing
 	$(CC) $(CC_FLAGS) -c $< -o $@ $(CC_LIBS)
 
 # Compile C++ source files to object files:
@@ -82,5 +100,5 @@ $(OBJ_DIR)/%.o : $(SRC_DIR)/%.cu $(INC_DIR)/%.cuh
 
 # Clean objects in object directory.
 clean:
-	$(RM) -r bin/* $(EXE)
+	$(RM) -r bin/* $(EXE) $(EXE2)
 

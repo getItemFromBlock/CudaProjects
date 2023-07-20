@@ -180,6 +180,7 @@ bool CudaUtil::CreateFrameBuffer(FrameBuffer& tex, Maths::IVec2 res, ChannelType
     if (res.x <= 0 || res.y <= 0) return false;
     tex.resolution = res;
     const s32 fsize = (type == ChannelType::F32 ? sizeof(f32) : sizeof(u8)) * 8;
+    tex.type = type;
     cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(fsize, fsize, fsize, fsize, type == ChannelType::F32 ? cudaChannelFormatKindFloat : cudaChannelFormatKindUnsigned);
     CheckError(cudaMallocArray(&tex.device_data, &channelDesc, tex.resolution.x, tex.resolution.y, cudaArraySurfaceLoadStore));
     struct cudaResourceDesc resDesc;

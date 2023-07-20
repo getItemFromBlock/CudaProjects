@@ -112,6 +112,21 @@ void ParseArgs(int argc, char* argv[], Parameters& params)
 			}
 			++i;
 			break;
+		case 'q':
+			if (!ReadInteger(params.quality, argv[i + 1], false))
+			{
+				params.quality = 16;
+				if (strcmp(argv[i + 1], "0"))
+				{
+					std::cerr << "Invalid number " << argv[i + 1] << std::endl;
+				}
+			}
+			else
+			{
+				std::cout << "Set quality to " << params.quality << std::endl;
+			}
+			++i;
+			break;
 		default:
 			break;
 		}
