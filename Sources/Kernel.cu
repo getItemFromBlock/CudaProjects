@@ -168,12 +168,12 @@ __device__ Vec3 GetColor(Ray r, curandState* const globalState, const u64 index,
         Vec3 diffuse = mat->diffuseTex != ~0 ? textures[mat->diffuseTex].Sample(uv).GetVector() : mat->diffuseColor;
         f32 metallic = mat->metallicTex != ~0 ? textures[mat->metallicTex].Sample(uv).x : mat->metallic;
         f32 roughness = mat->roughnessTex != ~0 ? textures[mat->roughnessTex].Sample(uv).x : mat->roughness;
-        roughness = roughness * roughness * roughness;
+        roughness = powf(roughness, 5.0f);
         f32 transmit = (mat->transmittanceColor.x + mat->transmittanceColor.y + mat->transmittanceColor.z) / 3;
-        if (RandomUniform(globalState, index) > (metallic + transmit) / 2)
+        if (RandomUniform(globalState, index) < (metallic + transmit))
         {
             r.pos = result.pos + r.dir * 0.00001f;
-            if (transmit > 0 && RandomUniform(globalState, index) < transmit)
+            if (inverted || (transmit > 0 && RandomUniform(globalState, index) < transmit))
             {
                 if (!inverted)
                 {
