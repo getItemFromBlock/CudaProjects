@@ -21,7 +21,7 @@ CC_LIBS=-lpthread
 
 # NVCC compiler options:
 NVCC=nvcc
-NVCC_FLAGS=-IIncludes -IHeaders -O3
+NVCC_FLAGS=-IIncludes -IHeaders -O3 -dc
 NVCC_FLAGS2= $(NVCC_FLAGS) -DRAY_TRACING
 NVCC_LIBS=
 
@@ -41,7 +41,7 @@ SRC_DIR = Sources
 
 # Object file directory:
 OBJ_DIR = bin
-OBJ_DIR2 = bin2
+OBJ_DIR2 = bin_rtx
 
 # Include header file diretory:
 INC_DIR = Headers
