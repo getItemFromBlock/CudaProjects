@@ -140,7 +140,7 @@ __device__ HitRecord RayTrace(const Ray& r, const Mesh* meshes, const Material* 
 __device__ Vec3 GetColor(Ray r, curandState* const globalState, const u64 index, const Mesh* meshes, const Material* materials, const Texture* textures, const u32 meshCount)
 {
     f32 far = 100000.0f;
-    Material* mat = nullptr;
+    const Material* mat = nullptr;
     Vec3 color = Vec3(1);
     bool inverted = false;
     HitRecord result;
@@ -275,7 +275,7 @@ __global__ void RayTracingKernelDebug(FrameBuffer fb, const Mesh* meshes, const 
     Ray r = Ray(pos, right * coord.x - up * coord.y + front * fov);
     f32 far = 100000.0f;
     Vec3 color = Vec3(1);
-    Material* mat = nullptr;
+    const Material* mat = nullptr;
     u8 iterator = 0;
     bool inverted = false;
     while (iterator < 5)

@@ -99,11 +99,11 @@ $(EXE2) : $(OBJS2)
 
 # Compile main .cpp file to object files:
 $(OBJ_DIR)/Main.o : $(SRC_DIR)/Main.cpp
-	mkdir -p bin/Maths bin/RayTracing
+	mkdir -p $(OBJ_DIR)/Maths $(OBJ_DIR)/RayTracing
 	$(CC) $(CC_FLAGS) -c $< -o $@ $(CC_LIBS)
 	
 $(OBJ_DIR2)/Main.o : $(SRC_DIR)/Main.cpp
-	mkdir -p bin/Maths bin/RayTracing
+	mkdir -p $(OBJ_DIR2)/Maths $(OBJ_DIR2)/RayTracing
 	$(CC) $(CC_FLAGS2) -c $< -o $@ $(CC_LIBS)
 
 # Compile C++ source files to object files:
