@@ -95,7 +95,7 @@ $(EXE) : $(OBJS)
 	$(CC) $(CC_FLAGS) $(OBJS) -o $@ $(CUDA_INC_DIR) $(CUDA_LIB_DIR) $(CUDA_LINK_LIBS)
 	
 $(EXE2) : $(OBJS2)
-	$(CC) $(CC_FLAGS2) $(OBJS) -o $@ $(CUDA_INC_DIR) $(CUDA_LIB_DIR) $(CUDA_LINK_LIBS)
+	$(CC) $(CC_FLAGS2) $(OBJS2) -o $@ $(CUDA_INC_DIR) $(CUDA_LIB_DIR) $(CUDA_LINK_LIBS)
 
 # Compile main .cpp file to object files:
 $(OBJ_DIR)/Main.o : $(SRC_DIR)/Main.cpp
