@@ -87,6 +87,13 @@ struct std::hash<Vec3>
             ^ (hash<f32>()(k.y) << 1)) >> 1)
             ^ (hash<f32>()(k.z) << 1);
     }
+
+    std::size_t operator()(Vec3& k) const
+    {
+        return ((hash<f32>()(k.x)
+            ^ (hash<f32>()(k.y) << 1)) >> 1)
+            ^ (hash<f32>()(k.z) << 1);
+    }
 };
 
 struct MeshData
