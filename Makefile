@@ -92,7 +92,7 @@ all : $(TARGETS)
 
 # Link c++ and CUDA compiled object files to target executable:
 $(EXE) : $(OBJS)
-    $(NVCC) $(NVCC_FLAGS) -dlink $(OBJS) -o $(OBJ_DIR)/link.o $(NVCC_LIBS)
+	$(NVCC) $(NVCC_FLAGS) -dlink $(OBJS) -o $(OBJ_DIR)/link.o $(NVCC_LIBS)
 	$(CC) $(CC_FLAGS) $(OBJS) $(OBJ_DIR)/link.o -o $@ $(CUDA_INC_DIR) $(CUDA_LIB_DIR) $(CUDA_LINK_LIBS)
 	
 $(EXE2) : $(OBJS2)
