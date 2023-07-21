@@ -87,13 +87,6 @@ struct std::hash<Vec3>
             ^ (hash<f32>()(k.y) << 1)) >> 1)
             ^ (hash<f32>()(k.z) << 1);
     }
-
-    std::size_t operator()(Vec3& k) const
-    {
-        return ((hash<f32>()(k.x)
-            ^ (hash<f32>()(k.y) << 1)) >> 1)
-            ^ (hash<f32>()(k.z) << 1);
-    }
 };
 
 struct MeshData
@@ -178,7 +171,7 @@ void LoadMeshes(std::vector<Mesh>& meshes, u64 matDelta, std::vector<tinyobj::sh
             bitangent = -bitangent.Normalize();
             s32 tIndex = -1;
             s32 cIndex = -1;
-            auto& result = data.bufferedTangent.find(tangent);
+            const auto& result = data.bufferedTangent.find(tangent);
             if (result != data.bufferedTangent.end())
             {
                 tIndex = result->second;
@@ -189,7 +182,7 @@ void LoadMeshes(std::vector<Mesh>& meshes, u64 matDelta, std::vector<tinyobj::sh
                 tIndex = static_cast<s32>(data.tangents.size());
                 data.tangents.push_back(tangent);
             }
-            auto& result2 = data.bufferedCotangent.find(bitangent);
+            const auto& result2 = data.bufferedCotangent.find(bitangent);
             if (result2 != data.bufferedCotangent.end())
             {
                 cIndex = result2->second;
