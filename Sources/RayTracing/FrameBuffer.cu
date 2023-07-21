@@ -69,7 +69,7 @@ __device__ void FrameBuffer::Write(Maths::IVec2 pos, u32 color)
 	}
 }
 
-__device__ void FrameBuffer::Write(IVec2 pos, Vec4 color)
+__device__ void FrameBuffer::WriteVec(IVec2 pos, Vec4 color)
 {
 	if (type == ChannelType::F32)
 	{

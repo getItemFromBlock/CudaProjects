@@ -23,7 +23,7 @@ namespace RayTracing
 		__device__ u32 Sample(Maths::IVec2 pos) const;
 		__device__ Maths::Vec4 SampleVec(Maths::IVec2 pos) const;
 		__device__ void Write(Maths::IVec2 pos, u32 color);
-		__device__ void Write(Maths::IVec2 pos, Maths::Vec4 color);
+		__device__ void WriteVec(Maths::IVec2 pos, Maths::Vec4 color);
 
 		cudaArray_t device_data = nullptr;
 		cudaSurfaceObject_t device_surf = 0;

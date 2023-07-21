@@ -112,14 +112,14 @@ __global__ void FractalKernel(FrameBuffer fb, const f64 iTime)
     u32 val = Mandelbrot(x,y);
     if (val == MAX_ITER)
     {
-        fb.Write(pixel, Maths::Vec3());
+        fb.WriteVec(pixel, Maths::Vec3());
         return;
     }
     f32 norm = val * 1.0f / MAX_ITER;
     Vec3 rgb;
     norm = powf(norm, 0.3f);
     HSVtoRGB(rgb, Vec3(norm*360, 1, 1));
-    fb.Write(pixel, rgb);
+    fb.WriteVec(pixel, rgb);
 }
 
 __device__ HitRecord RayTrace(const Ray& r, const Mesh* meshes, const Material* mats, u32 meshCount, f32 far, const Material*& mat, bool inverted = false)
@@ -244,7 +244,7 @@ __global__ void RayTracingKernel(FrameBuffer fb, curandState* const globalState,
     {
         color += GetColor(r, globalState, index, meshes, mats, texs, meshCount);
     }
-    fb.Write(pixel, fb.SampleVec(pixel) + Vec4(color, 1.0f));
+    fb.WriteVec(pixel, fb.SampleVec(pixel) + Vec4(color, 1.0f));
 }
 
 // WARNING: The two framebuffers MUST have the same resolution
@@ -254,7 +254,7 @@ __global__ void CopyKernel(const FrameBuffer source, FrameBuffer destination, co
     if (index >= static_cast<u64>(source.resolution.x) * source.resolution.y) return;
     Maths::IVec2 pixel = Maths::IVec2(index % source.resolution.x, index / source.resolution.x);
     Vec4 c = source.SampleVec(pixel) * colorMultiplier;
-    destination.Write(pixel, invertColor ? Vec4(c.z, c.y, c.x, c.w) : c);
+    destination.WriteVec(pixel, invertColor ? Vec4(c.z, c.y, c.x, c.w) : c);
 }
 
 __global__ void ClearKernel(FrameBuffer fb, const Vec4 color)
@@ -262,7 +262,7 @@ __global__ void ClearKernel(FrameBuffer fb, const Vec4 color)
     u64 index = threadIdx.x + static_cast<u64>(blockIdx.x) * blockDim.x;
     if (index >= static_cast<u64>(fb.resolution.x) * fb.resolution.y) return;
     Maths::IVec2 pixel = Maths::IVec2(index % fb.resolution.x, index / fb.resolution.x);
-    fb.Write(pixel, color);
+    fb.WriteVec(pixel, color);
 }
 
 __global__ void RayTracingKernelDebug(FrameBuffer fb, const Mesh* meshes, const Material* mats, const Texture* texs, Vec3 pos, const Vec3 front, const Vec3 up, const f32 fov, u32 meshCount)
@@ -355,7 +355,7 @@ __global__ void RayTracingKernelDebug(FrameBuffer fb, const Mesh* meshes, const 
             far = 100000.0f;
         }
     }
-    fb.Write(pixel, color);
+    fb.WriteVec(pixel, color);
 }
 
 __global__ void VerticeKernel(Mesh* meshes, u32 meshIndex, Vec3 pos, Quat rot, Vec3 scale)
