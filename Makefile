@@ -92,11 +92,11 @@ all : $(TARGETS)
 
 # Link c++ and CUDA compiled object files to target executable:
 $(EXE) : $(OBJS)
-	$(NVCC) $(NVCC_FLAGS) -dlink $(OBJS) -o $(OBJ_DIR)/link.o $(NVCC_LIBS)
+	$(NVCC) -dlink $(OBJS) -o $(OBJ_DIR)/link.o $(NVCC_LIBS)
 	$(CC) $(CC_FLAGS) $(OBJS) $(OBJ_DIR)/link.o -o $@ $(CUDA_INC_DIR) $(CUDA_LIB_DIR) $(CUDA_LINK_LIBS)
 	
 $(EXE2) : $(OBJS2)
-	$(NVCC) $(NVCC_FLAGS2) -dlink $(OBJS2) -o $(OBJ_DIR2)/link.o $(NVCC_LIBS)
+	$(NVCC) -dlink $(OBJS2) -o $(OBJ_DIR2)/link.o $(NVCC_LIBS)
 	$(CC) $(CC_FLAGS2) $(OBJS2) $(OBJ_DIR2)/link.o -o $@ $(CUDA_INC_DIR) $(CUDA_LIB_DIR) $(CUDA_LINK_LIBS)
 
 # Compile main .cpp file to object files:
