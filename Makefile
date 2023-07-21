@@ -12,6 +12,7 @@ CUDA_ROOT_DIR=/usr/local/cuda
 # CC compiler options:
 CC=g++
 CC_FLAGS=-std=c++17 -IIncludes -IHeaders -I$(CUDA_ROOT_DIR)/include -O3
+CC_FLAGS2=$(CC_FLAGS) -DRAY_TRACING
 CC_LIBS=-lpthread
 
 ##########################################################
@@ -21,6 +22,7 @@ CC_LIBS=-lpthread
 # NVCC compiler options:
 NVCC=nvcc
 NVCC_FLAGS=-IIncludes -IHeaders -O3
+NVCC_FLAGS2= $(NVCC_FLAGS) -DRAY_TRACING
 NVCC_LIBS=
 
 # CUDA library directory:
@@ -39,6 +41,7 @@ SRC_DIR = Sources
 
 # Object file directory:
 OBJ_DIR = bin
+OBJ_DIR2 = bin2
 
 # Include header file diretory:
 INC_DIR = Headers
@@ -66,29 +69,42 @@ OBJS += $(OBJ_DIR)/RayTracing/ModelLoader.o
 OBJS += $(OBJ_DIR)/RayTracing/RayTracing.o
 OBJS += $(OBJ_DIR)/RayTracing/Texture.o
 
+OBJS2 = $(OBJ_DIR2)/Main.o
+OBJS2 += $(OBJ_DIR2)/CudaUtil.o
+OBJS2 += $(OBJ_DIR2)/EncoderThread.o
+OBJS2 += $(OBJ_DIR2)/Kernel.o
+OBJS2 += $(OBJ_DIR2)/RenderThread.o
+OBJS2 += $(OBJ_DIR2)/Signal.o
+OBJS2 += $(OBJ_DIR2)/Maths/Maths.o
+OBJS2 += $(OBJ_DIR2)/RayTracing/FrameBuffer.o
+OBJS2 += $(OBJ_DIR2)/RayTracing/Mesh.o
+OBJS2 += $(OBJ_DIR2)/RayTracing/ModelLoader.o
+OBJS2 += $(OBJ_DIR2)/RayTracing/RayTracing.o
+OBJS2 += $(OBJ_DIR2)/RayTracing/Texture.o
+
 ##########################################################
 
 ## Compile ##
 
-all :
-    $(EXE) $(EXE2) clean
+TARGETS = $(EXE) $(EXE2) clean
+
+all : $(TARGETS)
 
 # Link c++ and CUDA compiled object files to target executable:
 $(EXE) : $(OBJS)
 	$(CC) $(CC_FLAGS) $(OBJS) -o $@ $(CUDA_INC_DIR) $(CUDA_LIB_DIR) $(CUDA_LINK_LIBS)
-
-$(EXE2) :
-	CC_FLAGS += -DRAY_TRACING
-	make rtx
 	
-	
-rtx: $(OBJS)
-	$(CC) $(CC_FLAGS) $(OBJS) -o $@ $(CUDA_INC_DIR) $(CUDA_LIB_DIR) $(CUDA_LINK_LIBS)
+$(EXE2) : $(OBJS2)
+	$(CC) $(CC_FLAGS2) $(OBJS) -o $@ $(CUDA_INC_DIR) $(CUDA_LIB_DIR) $(CUDA_LINK_LIBS)
 
 # Compile main .cpp file to object files:
 $(OBJ_DIR)/Main.o : $(SRC_DIR)/Main.cpp
 	mkdir -p bin/Maths bin/RayTracing
 	$(CC) $(CC_FLAGS) -c $< -o $@ $(CC_LIBS)
+	
+$(OBJ_DIR2)/Main.o : $(SRC_DIR)/Main.cpp
+	mkdir -p bin/Maths bin/RayTracing
+	$(CC) $(CC_FLAGS2) -c $< -o $@ $(CC_LIBS)
 
 # Compile C++ source files to object files:
 $(OBJ_DIR)/%.o : $(SRC_DIR)/%.cpp $(INC_DIR)/%.hpp
@@ -97,8 +113,16 @@ $(OBJ_DIR)/%.o : $(SRC_DIR)/%.cpp $(INC_DIR)/%.hpp
 # Compile CUDA source files to object files:
 $(OBJ_DIR)/%.o : $(SRC_DIR)/%.cu $(INC_DIR)/%.cuh
 	$(NVCC) $(NVCC_FLAGS) -c $< -o $@ $(NVCC_LIBS)
+	
+# Compile C++ source files to object files:
+$(OBJ_DIR2)/%.o : $(SRC_DIR)/%.cpp $(INC_DIR)/%.hpp
+	$(CC) $(CC_FLAGS2) -c $< -o $@ $(CC_LIBS)
+
+# Compile CUDA source files to object files:
+$(OBJ_DIR2)/%.o : $(SRC_DIR)/%.cu $(INC_DIR)/%.cuh
+	$(NVCC) $(NVCC_FLAGS2) -c $< -o $@ $(NVCC_LIBS)
 
 # Clean objects in object directory.
 clean:
-	$(RM) -r bin/* $(EXE) $(EXE2)
+	$(RM) -r $(OBJ_DIR)/* $(OBJ_DIR2)/* $(EXE) $(EXE2)
 
