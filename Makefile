@@ -30,7 +30,7 @@ CUDA_LIB_DIR= -L$(CUDA_ROOT_DIR)/lib64
 # CUDA include directory:
 CUDA_INC_DIR= -I$(CUDA_ROOT_DIR)/include
 # CUDA linking libraries:
-CUDA_LINK_LIBS= -lcudart -pthread -lpthread -lcurand
+CUDA_LINK_LIBS= -lcudart -pthread -lpthread -lcurand -lcudadevrt
 
 ##########################################################
 
@@ -92,10 +92,12 @@ all : $(TARGETS)
 
 # Link c++ and CUDA compiled object files to target executable:
 $(EXE) : $(OBJS)
-	$(CC) $(CC_FLAGS) $(OBJS) -o $@ $(CUDA_INC_DIR) $(CUDA_LIB_DIR) $(CUDA_LINK_LIBS)
+    $(NVCC) $(NVCC_FLAGS) -dlink $(OBJS) -o $(OBJ_DIR)/link.o $(NVCC_LIBS)
+	$(CC) $(CC_FLAGS) $(OBJS) $(OBJ_DIR)/link.o -o $@ $(CUDA_INC_DIR) $(CUDA_LIB_DIR) $(CUDA_LINK_LIBS)
 	
 $(EXE2) : $(OBJS2)
-	$(CC) $(CC_FLAGS2) $(OBJS2) -o $@ $(CUDA_INC_DIR) $(CUDA_LIB_DIR) $(CUDA_LINK_LIBS)
+	$(NVCC) $(NVCC_FLAGS2) -dlink $(OBJS2) -o $(OBJ_DIR2)/link.o $(NVCC_LIBS)
+	$(CC) $(CC_FLAGS2) $(OBJS2) $(OBJ_DIR2)/link.o -o $@ $(CUDA_INC_DIR) $(CUDA_LIB_DIR) $(CUDA_LINK_LIBS)
 
 # Compile main .cpp file to object files:
 $(OBJ_DIR)/Main.o : $(SRC_DIR)/Main.cpp
