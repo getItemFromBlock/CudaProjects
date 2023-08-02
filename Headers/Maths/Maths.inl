@@ -959,10 +959,8 @@ namespace Maths
 
 #pragma region Quat
 
-    inline Quat::Quat(const Mat3& in)
+    inline Quat::Quat(const Mat3& in) : Quat(Mat4(in))
     {
-        a = sqrtf(1 + in[0] + in[4] + in[8]) / 2.0f;
-        v = Vec3(in[5] - in[7], in[6] - in[2], in[1] - in[3]) / (4*a);
     }
 
     inline Quat::Quat(const Mat4& in)

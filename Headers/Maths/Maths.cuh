@@ -647,7 +647,6 @@ namespace Maths
 
         CUDA_FUNCTION inline Quat(Vec3 vector, f32 real) : v(vector), a(real) {}
 
-        // TODO apply changes made to Quat(const Mat4& in)
         CUDA_FUNCTION inline Quat(const Mat3& in);
 
         CUDA_FUNCTION inline Quat(const Mat4& in);
