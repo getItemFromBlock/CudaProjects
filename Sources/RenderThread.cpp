@@ -45,7 +45,7 @@ void RenderThread::Resize(IVec2 newRes)
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
-	storedRes = newRes;
+	storedRes = IVec2(Util::MaxI(newRes.x, 32), Util::MaxI(newRes.y, 32));
 	resize.Store(true);
 }
 

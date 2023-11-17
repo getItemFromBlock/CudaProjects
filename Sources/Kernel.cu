@@ -446,7 +446,7 @@ void Kernel::RunFractalKernels(u32* img, f64 iTime)
     CudaUtil::CheckError(cudaGetLastError(), "FractalKernel launch failed: %s");
     CudaUtil::SynchronizeDevice();
 
-    CudaUtil::CopyFrameBuffer(mainFB, img, CudaUtil::CopyType::DToH);
+    CudaUtil::CopyFrameBuffer(surfaceFB, img, CudaUtil::CopyType::DToH);
 }
 
 void Kernel::UpdateMeshVertices(Mesh* mesh, u32 index, const Maths::Vec3& pos, const Maths::Quat& rot, const Maths::Vec3& scale)

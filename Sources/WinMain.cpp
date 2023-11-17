@@ -11,7 +11,7 @@
 
 CHAR szClassName[] = "MainClass";
 CHAR szTitle[] = "CUDA Demo";
-HCURSOR cursorHide, cursorDefault;
+HCURSOR cursorHide;
 bool captured = false;
 RenderThread th;
 
@@ -26,7 +26,6 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
     //_CrtSetBreakAlloc(163);
 #endif
     {
-        cursorDefault = LoadCursor(NULL, IDC_ARROW);
         cursorHide = nullptr;
 
         WNDCLASSEX wcex = {};
@@ -58,7 +57,13 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
         ShowWindow(hWnd, nCmdShow);
         UpdateWindow(hWnd);
 
-        th.Init(hWnd, Maths::IVec2(800, 600), true);
+        th.Init(hWnd, Maths::IVec2(800, 600), 
+#ifdef RAY_TRACING
+            true
+#else
+            false
+#endif
+            );
         LONG_PTR lExStyle = GetWindowLongPtr(hWnd, GWL_EXSTYLE);
         lExStyle &= ~(WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE);
         SetWindowLongPtr(hWnd, GWL_EXSTYLE, lExStyle);
@@ -95,22 +100,35 @@ LRESULT CALLBACK WndProc(_In_ HWND hWnd, _In_ UINT message, _In_ WPARAM wParam, 
     case WM_SIZE:
         th.Resize(Maths::IVec2(LOWORD(lParam), HIWORD(lParam)));
         break;
+    case WM_GETMINMAXINFO:
+    {
+        LPMINMAXINFO lpMMI = (LPMINMAXINFO)lParam;
+        lpMMI->ptMinTrackSize.x = 64;
+        lpMMI->ptMinTrackSize.y = 128;
+        break;
+    }
     case WM_KEYDOWN:
         SetKeyState(wParam, true);
         break;
+#ifdef RAY_TRACING
     case WM_KEYUP:
         if (wParam == VK_ESCAPE)
         {
             captured = !captured;
-            SetCursor(captured ? cursorHide : cursorDefault);
             if (captured)
             {
                 OnMoveMouse(hWnd, true);
+                SetCursor(cursorHide);
+            }
+            else
+            {
+                return DefWindowProc(hWnd, message, wParam, lParam);
             }
             break;
         }
         SetKeyState(wParam, false);
         break;
+#endif
     case WM_SYSKEYDOWN:
         return DefWindowProc(hWnd, message, wParam, lParam);
     case WM_MOUSEMOVE:
@@ -118,7 +136,14 @@ LRESULT CALLBACK WndProc(_In_ HWND hWnd, _In_ UINT message, _In_ WPARAM wParam, 
         break;
     case WM_SETCURSOR:
     {
-        SetCursor(captured ? cursorHide : cursorDefault);
+        if (captured)
+        {
+            SetCursor(cursorHide);
+        }
+        else
+        {
+            return DefWindowProc(hWnd, message, wParam, lParam);
+        }
         break;
     }
     default:
