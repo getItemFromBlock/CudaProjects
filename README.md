@@ -1,7 +1,7 @@
 # CudaProjects
 A set of C++/CUDA projects making use of the GPU
 
-<img src="https://github.com/getItemFromBlock/CudaProjects/blob/main/Assets/final_render_q1024.jpg" height="600" />
+<img src="https://github.com/getItemFromBlock/CudaProjects/blob/main/Assets/final_render_q1024.jpg" height="400" />
 
 ## Building
 If not already done, you need to [install CUDA](https://docs.nvidia.com/cuda/cuda-quick-start-guide/index.html) for your computer
