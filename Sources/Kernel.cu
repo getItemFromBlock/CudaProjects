@@ -2,31 +2,50 @@
 
 #include <chrono>
 
+// Reference here: https://developercommunity.microsoft.com/t/Add-support-for-CUDA-extensions-to-Intel/399545#T-N10086632
+#ifdef __INTELLISENSE__
+#define __CUDACC__
+#define CUDA_KERNEL(...)
+#define FAKEINIT = {0}
+#else
+#define CUDA_KERNEL(...) <<< __VA_ARGS__ >>>
+#define FAKEINIT
+#endif
+
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
 using namespace Maths;
-using namespace RayTracing;
+using namespace Compute;
+using namespace Resources;
 
 #define MAX_ITER 2048
+#define M 256
 
 __device__ f32 RandomUniform(curandState* const globalState, const u64 index)
 {
     return curand_uniform(globalState + index);
 }
 
-__device__ f32 RandomUniform2(curandState* const globalState, const u64 index)
+__device__ Vec3 RandomDirection(curandState* const globalState, const u64 index)
 {
-    return curand_uniform(globalState + index) * 2 - 1;
+    float z = RandomUniform(globalState, index) * 2 - 1;
+    float a = RandomUniform(globalState, index) * CURAND_2PI;
+    float r = sqrt(1.0f - z * z);
+    float x = r * cos(a);
+    float y = r * sin(a);
+    return Vec3(x, y, z);
 }
 
-__device__ Vec3 Deviate(curandState* const globalState, const u64 index, const Vec3& dir, const f32 amount)
+
+__device__ Vec3 Deviate(curandState* const globalState, const u64 index, const Vec3& dir, const float amount)
 {
     if (amount == 0) return dir;
     Vec3 tang = dir.GetPerpendicular().Normalize();
     Vec3 cotang = dir.Cross(tang);
-    return (tang * (RandomUniform2(globalState, index) * amount) + cotang * (RandomUniform2(globalState, index) * amount) + dir * (RandomUniform(globalState, index) * (2 - amount))).Normalize();
+    return (tang * (RandomUniform(globalState, index) * amount) + cotang * (RandomUniform(globalState, index) * amount) + dir * (RandomUniform(globalState, index) * (2 - amount))).Normalize();
 }
+
 
 __device__ void HSVtoRGB(Vec3& rgb, const Vec3& hsv)
 {
@@ -137,21 +156,60 @@ __device__ HitRecord RayTrace(const Ray& r, const Mesh* meshes, const Material* 
     return result;
 }
 
-__device__ Vec3 GetColor(Ray r, curandState* const globalState, const u64 index, const Mesh* meshes, const Material* materials, const Texture* textures, const u32 meshCount)
+#define INV_SQRT_OF_2PI 0.39894228040143267793994605993439f  // 1.0/SQRT_OF_2PI
+#define INV_PI 0.31830988618379067153776752674503f
+
+// https://www.shadertoy.com/view/3dd3Wr
+__device__ Vec4 smartDeNoise(const FrameBuffer& tex, Vec2 uv, f32 sigma, f32 kSigma, f32 threshold)
+{
+    f32 radius = roundf(kSigma * sigma);
+    f32 radQ = radius * radius;
+
+    f32 invSigmaQx2 = 0.5f / (sigma * sigma);      // 1.0 / (sigma^2 * 2.0)
+    f32 invSigmaQx2PI = INV_PI * invSigmaQx2;    // 1.0 / (sqrt(PI) * sigma)
+
+    f32 invThresholdSqx2 = 0.5f / (threshold * threshold);     // 1.0 / (sigma^2 * 2.0)
+    f32 invThresholdSqrt2PI = INV_SQRT_OF_2PI / threshold;   // 1.0 / (sqrt(2*PI) * sigma)
+
+    Vec4 centrPx = tex.SampleVec(uv);
+
+    f32 zBuff = 0;
+    Vec4 aBuff = Vec4(0);
+    Vec2 size = Vec2(tex.GetResolution());
+
+    for (f32 x = -radius; x <= radius; x++) {
+        f32 pt = sqrtf(radQ - x * x);  // pt = yRadius: have circular trend
+        for (f32 y = -pt; y <= pt; y++) {
+            Vec2 d = Vec2(x, y);
+
+            f32 blurFactor = expf(-d.Dot(d) * invSigmaQx2) * invSigmaQx2PI;
+
+            Vec4 walkPx = tex.SampleVec(uv + d / size);
+
+            Vec4 dC = walkPx - centrPx;
+            f32 deltaFactor = exp(-dC.Dot(dC) * invThresholdSqx2) * invThresholdSqrt2PI * blurFactor;
+
+            zBuff += deltaFactor;
+            aBuff += walkPx * deltaFactor;
+        }
+    }
+    return aBuff / zBuff;
+}
+
+__device__ Vec3 GetColor(Ray r, curandState* const globalState, const u64 index, const Mesh* meshes, const Material* materials, const Texture* textures, const Cubemap* cbs, const u32 meshCount)
 {
     f32 far = 100000.0f;
     const Material* mat = nullptr;
-    Vec3 color = Vec3(1);
+    Vec3 throughput = Vec3(1);
+    Vec3 output = Vec3();
     bool inverted = false;
     HitRecord result;
-    u8 iterator = 0;
-    while (iterator < 8)
+    for (u32 iterator = 0; iterator < 8; iterator++)
     {
-        ++iterator;
         result = RayTrace(r, meshes, materials, meshCount, far, mat, inverted);
         if (result.dist < 0)
         {
-            color *= Vec3(0.2f);
+            output += cbs[0].Sample(r.dir).GetVector() * throughput * 2;
             break;
         }
         Vec3 normal;
@@ -168,93 +226,102 @@ __device__ Vec3 GetColor(Ray r, curandState* const globalState, const u64 index,
         Vec3 diffuse = mat->diffuseTex != ~0 ? textures[mat->diffuseTex].Sample(uv).GetVector() : mat->diffuseColor;
         f32 metallic = mat->metallicTex != ~0 ? textures[mat->metallicTex].Sample(uv).x : mat->metallic;
         f32 roughness = mat->roughnessTex != ~0 ? textures[mat->roughnessTex].Sample(uv).x : mat->roughness;
+        roughness *= roughness;
+        //roughness = sqrtf(roughness);
         f32 transmit = (mat->transmittanceColor.x + mat->transmittanceColor.y + mat->transmittanceColor.z) / 3;
-        if (RandomUniform(globalState, index) < (metallic + transmit))
+        transmit = (RandomUniform(globalState, index) < (transmit - metallic/2)) ? 1.0f : 0.0f;
+        f32 doSpecular = (RandomUniform(globalState, index) < metallic) ? 1.0f : 0.0f;
+        f32 ior =  mat->ior;
+        if (!inverted)
         {
-            roughness = powf(roughness, 7.0f);
-            r.pos = result.pos + r.dir * 0.00001f;
-            if (inverted || (transmit > 0 && RandomUniform(globalState, index) < transmit*0.8f))
-            {
-                if (!inverted)
-                {
-                    Vec3 dir =  r.dir.Refract(normal, 1/mat->ior);
-                    if (dir.x != 0 || dir.y != 0 || dir.z != 0)
-                    {
-                        r.dir = Deviate(globalState, index, dir, roughness);
-                        inverted = !inverted;
-                    }
-                    else
-                    {
-                        r.dir = Deviate(globalState, index, r.dir.Reflect(normal), roughness);
-                    }
-                    color = color * diffuse * mat->transmittanceColor + mat->emissionColor;
-                }
-                else
-                {
-                    Vec3 dir = r.dir.Refract(-normal, mat->ior);
-                    if (dir.x != 0 || dir.y != 0 || dir.z != 0)
-                    {
-                        r.dir = Deviate(globalState, index, dir, roughness);
-                        inverted = !inverted;
-                    }
-                    else
-                    {
-                        r.dir = Deviate(globalState, index, r.dir.Reflect(-normal), roughness);
-                    }
-                }
-            }
-            else
-            {
-                r.dir = Deviate(globalState, index, r.dir.Reflect(normal), roughness);
-                color *= diffuse + mat->emissionColor;
-            }
-            if (mat->emissionColor.x > 0) break;
-            far = 100000.0f;
+            ior = 1 / ior;
         }
         else
         {
-            if (mat->emissionColor.x > 0) return color * mat->emissionColor;
-            color *= diffuse;
-            r.pos = result.pos;
-            if (RandomUniform(globalState, index) > 0.5f)
-            {
-                roughness = powf(roughness, 8.0f);
-                r.dir = Deviate(globalState, index, r.dir.Reflect(normal), roughness);
-            }
-            else
-            {
-                r.dir = Deviate(globalState, index, normal, 1.0f);
-            }
-            far = 100000.0f;
+            normal = -normal;
+            transmit = 1.0f;
+            diffuse = Vec3(1);
         }
+
+        Vec3 diffuseRayDir = (normal + RandomDirection(globalState, index)).Normalize();
+        Vec3 specularRayDir;
+        if (transmit != 0)
+        {
+            specularRayDir = r.dir.Refract(normal, ior);
+            doSpecular = transmit;
+            diffuse *= mat->transmittanceColor;
+            inverted = !inverted;
+        }
+        else
+        {
+            specularRayDir = r.dir.Reflect(normal);
+        }
+        specularRayDir = Util::Lerp(specularRayDir, diffuseRayDir, roughness).Normalize();
+
+        r.dir = Util::Lerp(diffuseRayDir, specularRayDir, doSpecular);
+        //r.dir = specularRayDir;
+
+        r.pos = result.pos;
+        if (doSpecular != 0)
+        {
+            r.pos += normal * 0.00001f;
+        }
+
+        // https://www.shadertoy.com/view/WsBBR3
+
+        output += mat->emissionColor * throughput;
+        throughput *= diffuse;
+
+        float p = Util::MaxF(throughput.x, Util::MaxF(throughput.y, throughput.z));
+        if (RandomUniform(globalState, index) > p)
+            break;
+
+        // Add the energy we 'lose' by randomly terminating paths
+        throughput *= 1.0f / p;
     }
-    return color;
+    return output;
 }
 
-__global__ void RayTracingKernel(FrameBuffer fb, curandState* const globalState, const Mesh* meshes, const Material* mats, const Texture* texs, Vec3 pos, const Vec3 front, const Vec3 up, const f32 fov, const u32 meshCount)
+__global__ void RayTracingKernel(FrameBuffer fb, curandState* const globalState, const Mesh* meshes, const Material* mats, const Texture* texs, const Cubemap* cbs, Vec3 pos, const Vec3 front, const Vec3 up, const f32 fov, const u32 meshCount)
 {
     u64 index = threadIdx.x + static_cast<u64>(blockIdx.x) * blockDim.x;
     if (index >= static_cast<u64>(fb.resolution.x) * fb.resolution.y) return;
     Maths::IVec2 pixel = Maths::IVec2(index % fb.resolution.x, index / fb.resolution.x);
-    Maths::Vec2 coord = (Vec2(pixel) * 2 - fb.resolution) / fb.resolution.y;
+    // Anti aliasing
+    Maths::Vec2 pixel2 = Vec2(pixel) + Vec2(RandomUniform(globalState, index), RandomUniform(globalState, index)) - 0.5f;
+    Maths::Vec2 coord = (pixel2 * 2 - fb.resolution) / fb.resolution.y;
     Vec3 right = front.Cross(up);
     Ray r = Ray(pos, right * coord.x - up * coord.y + front * fov);
-    Vec3 color;
-    for (u32 i = 0; i < 16; ++i)
-    {
-        color += GetColor(r, globalState, index, meshes, mats, texs, meshCount);
-    }
-    fb.Write(pixel, fb.SampleVec(pixel) + Vec4(color, 1.0f));
+    Vec3 color = GetColor(r, globalState, index, meshes, mats, texs, cbs, meshCount);
+
+    Vec4 lastFrameColor = fb.SampleVec(pixel);
+    f32 blend = lastFrameColor.w == 0.0f ? 1.0f : 1.0f / (1.0f + (1.0f / lastFrameColor.w));
+    color = Util::Lerp(lastFrameColor.GetVector(), color, blend);
+
+    fb.Write(pixel, Vec4(color, blend));
 }
 
 // WARNING: The two framebuffers MUST have the same resolution
-__global__ void CopyKernel(const FrameBuffer source, FrameBuffer destination, const f32 colorMultiplier, const bool invertColor)
+__global__ void CopyKernel(const FrameBuffer source, FrameBuffer destination, const f32 colorMultiplier)
 {
     u64 index = threadIdx.x + static_cast<u64>(blockIdx.x) * blockDim.x;
     if (index >= static_cast<u64>(source.resolution.x) * source.resolution.y) return;
     Maths::IVec2 pixel = Maths::IVec2(index % source.resolution.x, index / source.resolution.x);
     Vec4 c = source.SampleVec(pixel) * colorMultiplier;
-    destination.Write(pixel, invertColor ? Vec4(c.z, c.y, c.x, c.w) : c);
+    destination.Write(pixel, c);
+}
+
+// WARNING: The two framebuffers MUST have the same resolution
+__global__ void CopyKernelDenoise(const FrameBuffer source, FrameBuffer destination, const f32 colorMultiplier)
+{
+    u64 index = threadIdx.x + static_cast<u64>(blockIdx.x) * blockDim.x;
+    if (index >= static_cast<u64>(source.resolution.x) * source.resolution.y) return;
+    Maths::IVec2 pixel = Maths::IVec2(index % source.resolution.x, index / source.resolution.x);
+
+    Vec4 c = smartDeNoise(source, pixel, 5.0f, 1.0f, 0.2f);
+    destination.Write(pixel, c);
+
+    // https://www.shadertoy.com/view/3lcfDM
 }
 
 __global__ void ClearKernel(FrameBuffer fb, const Vec4 color)
@@ -265,7 +332,7 @@ __global__ void ClearKernel(FrameBuffer fb, const Vec4 color)
     fb.Write(pixel, color);
 }
 
-__global__ void RayTracingKernelDebug(FrameBuffer fb, const Mesh* meshes, const Material* mats, const Texture* texs, Vec3 pos, const Vec3 front, const Vec3 up, const f32 fov, u32 meshCount)
+__global__ void RayTracingKernelPreview(FrameBuffer fb, const Mesh* meshes, const Material* mats, const Texture* texs, const Cubemap* cbs, Vec3 pos, const Vec3 front, const Vec3 up, const f32 fov, u32 meshCount)
 {
     u64 index = threadIdx.x + static_cast<u64>(blockIdx.x) * blockDim.x;
     if (index >= static_cast<u64>(fb.resolution.x) * fb.resolution.y) return;
@@ -274,86 +341,53 @@ __global__ void RayTracingKernelDebug(FrameBuffer fb, const Mesh* meshes, const 
     Vec3 right = front.Cross(up);
     Ray r = Ray(pos, right * coord.x - up * coord.y + front * fov);
     f32 far = 100000.0f;
-    Vec3 color = Vec3(1);
+    Vec3 color;
     const Material* mat = nullptr;
-    u8 iterator = 0;
-    bool inverted = false;
-    while (iterator < 5)
+    HitRecord result = RayTrace(r, meshes, mats, meshCount, far, mat);
+    if (result.dist < 0)
     {
-        ++iterator;
-        HitRecord result = RayTrace(r, meshes, mats, meshCount, far, mat, inverted);
-        if (result.dist < 0)
-        {
-            if (iterator == 1) color *= Vec3(0.2f);
-            break;
-        }
+        color = cbs[0].Sample(r.dir).GetVector();
+        //if (iterator == 1) color *= 0.2f;
+    }
+    else
+    {
         Vec3 normal;
         Vec3 tangent;
         Vec3 bitangent;
         Vec2 uv;
-        meshes[result.mesh].FillData(result, normal, tangent, bitangent, uv, inverted);
+        meshes[result.mesh].FillData(result, normal, tangent, bitangent, uv, false);
         if (mat->normalTex != ~0)
         {
             Vec3 col = texs[mat->normalTex].Sample(uv).GetVector() * 2 - 1;
             normal = (tangent * col.x + bitangent * col.y + normal * col.z).Normalize();
         }
         Vec3 diffuse = mat->diffuseTex != ~0 ? texs[mat->diffuseTex].Sample(uv).GetVector() : mat->diffuseColor;
-        f32 metallic = mat->metallicTex != ~0 ? texs[mat->metallicTex].Sample(uv).x : mat->metallic;
-        f32 roughness = mat->roughnessTex != ~0 ? texs[mat->roughnessTex].Sample(uv).x : mat->roughness;
-        f32 transmit = (mat->transmittanceColor.x + mat->transmittanceColor.y + mat->transmittanceColor.z) / 3;
-        if ((metallic + transmit) > 0.8f)
-        {
-            r.pos = result.pos + r.dir * 0.00001f;
-            if (transmit > 0)
-            {
-                if (!inverted)
-                {
-                    Vec3 dir = r.dir.Refract(normal, 1 / mat->ior);
-                    if (dir.x != 0 || dir.y != 0 || dir.z != 0)
-                    {
-                        r.dir = dir;
-                        inverted = !inverted;
-                    }
-                    else
-                    {
-                        r.dir = r.dir.Reflect(normal);
-                    }
-                    color *= diffuse * mat->transmittanceColor + mat->emissionColor;
-                }
-                else
-                {
-                    Vec3 dir = r.dir.Refract(-normal, mat->ior);
-                    if (dir.x != 0 || dir.y != 0 || dir.z != 0)
-                    {
-                        r.dir = dir;
-                        inverted = !inverted;
-                    }
-                    else
-                    {
-                        r.dir = r.dir.Reflect(-normal);
-                    }
-                }
-            }
-            else
-            {
-                r.dir = r.dir.Reflect(normal);
-                color *= diffuse + mat->emissionColor;
-            }
-            if (mat->emissionColor.x > 0) break;
-            far = 100000.0f;
-        }
-        else
-        {
-            const Vec3 lightDir = Vec3(1, -2, 0.5f).Normalize();
-            f32 pr = Util::Clamp(-lightDir.Dot(normal));
-            pr += 0.2f;
-            diffuse *= pr;
-            r.pos = result.pos;
-            r.dir = r.dir.Reflect(normal);
-            color *= (diffuse*pr) + mat->emissionColor;
-            if (mat->emissionColor.x > 0) break;
-            far = 100000.0f;
-        }
+        const Vec3 lightDir = Vec3(1, -2, 0.5f).Normalize();
+        f32 pr = Util::Clamp(-lightDir.Dot(normal));
+        pr += 0.2f;
+        color = diffuse * pr + mat->emissionColor;
+    }
+    fb.Write(pixel, color);
+}
+
+__global__ void RayTracingKernelDebug(FrameBuffer fb, const Mesh* meshes, const Material* mats, Vec3 pos, const Vec3 front, const Vec3 up, const f32 fov, u32 meshCount)
+{
+    u64 index = threadIdx.x + static_cast<u64>(blockIdx.x) * blockDim.x;
+    if (index >= static_cast<u64>(fb.resolution.x) * fb.resolution.y) return;
+    Maths::IVec2 pixel = Maths::IVec2(index % fb.resolution.x, index / fb.resolution.x);
+    Maths::Vec2 coord = (Vec2(pixel) * 2 - fb.resolution) / fb.resolution.y;
+    Vec3 right = front.Cross(up);
+    Ray r = Ray(pos, right * coord.x - up * coord.y + front * fov);
+    f32 far = 100000.0f;
+    Vec3 color = Vec3(0.5f);
+    for (u32 i = 0; i < meshCount; ++i)
+    {
+        f32 hit = meshes[i].BoundsCheck(r, Maths::Vec2(0.0f, far));
+        if (hit > far) continue;
+        far = hit;
+        u32 a = i >> 1;
+        u32 b = a >> 1;
+        color = Vec3(i & 0x1, a & 0x1, b & 0x1);
     }
     fb.Write(pixel, color);
 }
@@ -439,9 +473,9 @@ void Kernel::ClearKernels()
 void Kernel::RunFractalKernels(u32* img, f64 iTime)
 {
     u32 count = mainFB.resolution.x * mainFB.resolution.y;
-    s32 M = CudaUtil::GetMaxThreads(deviceID);
+    s32 Mmax = CudaUtil::GetMaxThreads(deviceID);
 
-    FractalKernel<<<(count + M - 1) / M, M>>>(surfaceFB, iTime);
+    FractalKernel CUDA_KERNEL((count + Mmax - 1) / Mmax, Mmax) (surfaceFB, iTime);
 
     CudaUtil::CheckError(cudaGetLastError(), "FractalKernel launch failed: %s");
     CudaUtil::SynchronizeDevice();
@@ -452,67 +486,64 @@ void Kernel::RunFractalKernels(u32* img, f64 iTime)
 void Kernel::UpdateMeshVertices(Mesh* mesh, u32 index, const Maths::Vec3& pos, const Maths::Quat& rot, const Maths::Vec3& scale)
 {
     u32 count = mesh->verticeCount + 1;
-    s32 M = CudaUtil::GetMaxThreads(deviceID);
-    VerticeKernel<<<(count + M - 1) / M, M>>>(device_meshes, index, pos, rot, scale);
+    s32 Mmax = CudaUtil::GetMaxThreads(deviceID);
+    VerticeKernel CUDA_KERNEL((count + Mmax - 1) / Mmax, Mmax) (device_meshes, index, pos, rot, scale);
     CudaUtil::CheckError(cudaGetLastError(), "VerticeKernel launch failed: %s");
 }
 
-s32 M = 0;
+bool wasdebug = true;
 void Kernel::LaunchRTXKernels(const u32 meshCount, const Vec3& pos, const Vec3& front, const Vec3& up, const f32 fov, const u32 quality, const LaunchParams params)
 {
     const u32 count = mainFB.resolution.x * mainFB.resolution.y;
     if (params & ADVANCED)
     {
-        ClearKernel<<<(count + M - 1) / M, M>>>(mainFB, Vec4());
+        if (wasdebug) ClearKernel CUDA_KERNEL((count + M - 1) / M, M) (mainFB, Vec4());
+        wasdebug = false;
         for (u32 i = 0; i < quality; ++i)
         {
-            RayTracingKernel<<<(count + M - 1) / M, M>>>(mainFB, device_prngBuffer, device_meshes, device_materials, device_textures, pos, front, up, fov, meshCount);
+            RayTracingKernel CUDA_KERNEL((count + M - 1) / M, M) (mainFB, device_prngBuffer, device_meshes, device_materials, device_textures, device_cubemaps, pos, front, up, fov, meshCount);
             CudaUtil::SynchronizeDevice();
         }
-        CopyKernel<<<(count + M - 1) / M, M>>>(mainFB, surfaceFB, 1.0f/(16*quality), params & INVERTED_RB);
+        if (params & DENOISE)
+        {
+            CopyKernelDenoise CUDA_KERNEL((count + M - 1) / M, M) (mainFB, surfaceFB, 1.0f / (quality));
+        }
+        else
+        {
+            CopyKernel CUDA_KERNEL((count + M - 1) / M, M) (mainFB, surfaceFB, 1.0f/(quality));
+        }
+    }
+    else if (params & BOXDEBUG)
+    {
+        wasdebug = true;
+        RayTracingKernelDebug CUDA_KERNEL((count + M - 1) / M, M) (surfaceFB, device_meshes, device_materials, pos, front, up, fov, meshCount);
     }
     else
     {
-        RayTracingKernelDebug<<<(count + M - 1) / M, M>>>(surfaceFB, device_meshes, device_materials, device_textures, pos, front, up, fov, meshCount);
+        wasdebug = true;
+        RayTracingKernelPreview CUDA_KERNEL((count + M - 1) / M, M) (surfaceFB, device_meshes, device_materials, device_textures, device_cubemaps, pos, front, up, fov, meshCount);
     }
 }
 
 void Kernel::RenderMeshes(u32* img, const u32 meshCount, const Vec3& pos, const Vec3& front, const Vec3& up, const f32 fov, const u32 quality, const LaunchParams params)
 {
-    if (M)
-    {
-        LaunchRTXKernels(meshCount, pos, front, up, fov, quality, params);
-        CudaUtil::CheckError(cudaGetLastError(), "RayTracingKernelDebug launch failed: %s");
-    }
-    else
-    {
-        M = CudaUtil::GetMaxThreads(deviceID);
-        LaunchRTXKernels(meshCount, pos, front, up, fov, quality, params);
-        cudaError_t result = cudaGetLastError();
-        u32 counter = 0;
-        while (result != cudaSuccess && M > 16 && counter < 10)
-        {
-            M /= 2;
-            ++counter;
-            LaunchRTXKernels(meshCount, pos, front, up, fov, quality, params);
-            result = cudaGetLastError();
-        }
-        CudaUtil::CheckError(result, "Could not find adequate core number: %s");
-    }
+    LaunchRTXKernels(meshCount, pos, front, up, fov, quality, params);
+    CudaUtil::CheckError(cudaGetLastError(), "RayTracingKernelDebug launch failed: %s");
     CudaUtil::SynchronizeDevice();
     CudaUtil::CopyFrameBuffer(surfaceFB, img, CudaUtil::CopyType::DToH);
 }
 
 void Kernel::SeedRNGBuffer()
 {
-    s32 M = CudaUtil::GetMaxThreads(deviceID);
+    s32 Mmax = CudaUtil::GetMaxThreads(deviceID);
     u64 seed = std::chrono::system_clock::now().time_since_epoch().count();
-    SeedKernel<<<((u32)rngBufferSize + M - 1) / M, M>>>(device_prngBuffer, seed);
+    SeedKernel CUDA_KERNEL(((u32)rngBufferSize + Mmax - 1) / Mmax, Mmax) (device_prngBuffer, seed);
     CudaUtil::SynchronizeDevice();
 }
 
 void Kernel::UnloadMeshes(const std::vector<Mesh>& meshes)
 {
+    if (!meshes.size()) return;
     CudaUtil::Free(device_meshes);
     device_meshes = nullptr;
     for (auto& mesh : meshes)
@@ -525,17 +556,30 @@ void Kernel::UnloadMeshes(const std::vector<Mesh>& meshes)
 
 void Kernel::UnloadMaterials()
 {
+    if (!device_materials) return;
     CudaUtil::Free(device_materials);
     device_materials = nullptr;
 }
 
 void Kernel::UnloadTextures(const std::vector<Texture>& textures)
 {
+    if (!textures.size()) return;
     CudaUtil::Free(device_textures);
     device_textures = nullptr;
     for (auto& tex : textures)
     {
         CudaUtil::UnloadTexture(tex);
+    }
+}
+
+void Kernel::UnloadCubemaps(const std::vector<Cubemap>& cubemaps)
+{
+    if (!cubemaps.size()) return;
+    CudaUtil::Free(device_cubemaps);
+    device_cubemaps = nullptr;
+    for (auto& tex : cubemaps)
+    {
+        CudaUtil::UnloadCubemap(tex);
     }
 }
 
@@ -546,18 +590,28 @@ void Kernel::Synchronize()
 
 void Kernel::LoadMeshes(const std::vector<Mesh> meshes)
 {
+    if (meshes.size() == 0) return;
     device_meshes = CudaUtil::Allocate<Mesh>(meshes.size());
     CudaUtil::Copy(meshes.data(), device_meshes, sizeof(Mesh) * meshes.size(), CudaUtil::CopyType::HToD);
 }
 
 void Kernel::LoadTextures(const std::vector<Texture> textures)
 {
+    if (textures.size() == 0) return;
     device_textures = CudaUtil::Allocate<Texture>(textures.size());
     CudaUtil::Copy(textures.data(), device_textures, sizeof(Texture) * textures.size(), CudaUtil::CopyType::HToD);
 }
 
+void Kernel::LoadCubemaps(const std::vector<Cubemap> cubemaps)
+{
+    if (cubemaps.size() == 0) return;
+    device_cubemaps = CudaUtil::Allocate<Cubemap>(cubemaps.size());
+    CudaUtil::Copy(cubemaps.data(), device_cubemaps, sizeof(Cubemap) * cubemaps.size(), CudaUtil::CopyType::HToD);
+}
+
 void Kernel::LoadMaterials(const std::vector<Material> materials)
 {
+    if (materials.size() == 0) return;
     device_materials = CudaUtil::Allocate<Material>(materials.size());
     CudaUtil::Copy(materials.data(), device_materials, sizeof(Material) * materials.size(), CudaUtil::CopyType::HToD);
 }

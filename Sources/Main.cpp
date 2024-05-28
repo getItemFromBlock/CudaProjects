@@ -166,17 +166,12 @@ int main(int argc, char* argv[])
 	}
 	std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
 	auto start = now.time_since_epoch();
-	const s32 deviceCount = CudaUtil::GetDevicesCount();
-	CudaUtil::PrintDevicesName();
+	const s32 deviceCount = Compute::CudaUtil::GetDevicesCount();
+	Compute::CudaUtil::PrintDevicesName();
 	RenderThread* deviceThreadPool = new RenderThread[deviceCount];
 	for (s32 i = 0; i < deviceCount; ++i)
 	{
-#ifdef RAY_TRACING
-		deviceThreadPool[i].Init(params, i, true);
-#else
-
-		deviceThreadPool[i].Init(params, i, false);
-#endif
+		deviceThreadPool[i].Init(params, i);
 	}
 	std::cout << std::endl;
 	u64 max_frames = static_cast<u64>(LENGTH * params.targetFPS);

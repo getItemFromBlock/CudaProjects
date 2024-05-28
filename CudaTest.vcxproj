@@ -166,33 +166,35 @@
   <ItemGroup>
     <CudaCompile Include="Sources\Kernel.cu" />
     <CudaCompile Include="Sources\Maths\Maths.cu" />
-    <CudaCompile Include="Sources\RayTracing\CubeMap.cu" />
-    <CudaCompile Include="Sources\RayTracing\FrameBuffer.cu" />
-    <CudaCompile Include="Sources\RayTracing\Mesh.cu" />
-    <CudaCompile Include="Sources\RayTracing\RayTracing.cu" />
-    <CudaCompile Include="Sources\RayTracing\Texture.cu" />
+    <CudaCompile Include="Sources\Resources\Cubemap.cu" />
+    <CudaCompile Include="Sources\Resources\FrameBuffer.cu" />
+    <CudaCompile Include="Sources\Resources\Mesh.cu" />
+    <CudaCompile Include="Sources\Compute\RayTracing.cu" />
+    <CudaCompile Include="Sources\Resources\MipmappedTexture.cu" />
+    <CudaCompile Include="Sources\Resources\Texture.cu" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Sources\CudaUtil.cpp" />
+    <ClCompile Include="Sources\Compute\CudaUtil.cpp" />
     <ClCompile Include="Sources\EncoderThread.cpp" />
     <ClCompile Include="Sources\Main.cpp" />
-    <ClCompile Include="Sources\RayTracing\ModelLoader.cpp" />
+    <ClCompile Include="Sources\Resources\ModelLoader.cpp" />
     <ClCompile Include="Sources\WinMain.cpp" />
     <ClCompile Include="Sources\RenderThread.cpp" />
     <ClCompile Include="Sources\Signal.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Headers\CudaUtil.hpp" />
+    <ClInclude Include="Headers\Compute\CudaUtil.hpp" />
     <ClInclude Include="Headers\EncoderThread.hpp" />
     <ClInclude Include="Headers\Kernel.cuh" />
     <ClInclude Include="Headers\Maths\Maths.cuh" />
-    <ClInclude Include="Headers\RayTracing\CubeMap.cuh" />
-    <ClInclude Include="Headers\RayTracing\FrameBuffer.cuh" />
-    <ClInclude Include="Headers\RayTracing\Material.hpp" />
-    <ClInclude Include="Headers\RayTracing\Mesh.cuh" />
-    <ClInclude Include="Headers\RayTracing\ModelLoader.hpp" />
-    <ClInclude Include="Headers\RayTracing\RayTracing.cuh" />
-    <ClInclude Include="Headers\RayTracing\Texture.cuh" />
+    <ClInclude Include="Headers\Resources\Cubemap.cuh" />
+    <ClInclude Include="Headers\Resources\FrameBuffer.cuh" />
+    <ClInclude Include="Headers\Resources\Material.hpp" />
+    <ClInclude Include="Headers\Resources\Mesh.cuh" />
+    <ClInclude Include="Headers\Resources\MipmappedTexture.cuh" />
+    <ClInclude Include="Headers\Resources\ModelLoader.hpp" />
+    <ClInclude Include="Headers\Compute\RayTracing.cuh" />
+    <ClInclude Include="Headers\Resources\Texture.cuh" />
     <ClInclude Include="Headers\RenderThread.hpp" />
     <ClInclude Include="Headers\Signal.hpp" />
     <ClInclude Include="Headers\Types.hpp" />

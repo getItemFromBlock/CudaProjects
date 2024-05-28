@@ -3,19 +3,21 @@
 #include <vector>
 #include <string>
 #include "curand_kernel.h"
-#include "CudaUtil.hpp"
+#include "Compute/CudaUtil.hpp"
 #include "Maths/Maths.cuh"
-#include "RayTracing/Texture.cuh"
-#include "RayTracing/FrameBuffer.cuh"
-#include "RayTracing/Mesh.cuh"
-#include "RayTracing/Material.hpp"
-#include "RayTracing/Texture.cuh"
+#include "Resources/Texture.cuh"
+#include "Resources/Cubemap.cuh"
+#include "Resources/FrameBuffer.cuh"
+#include "Resources/Mesh.cuh"
+#include "Resources/Material.hpp"
 
 enum LaunchParams : u8
 {
 	NONE = 0,
 	ADVANCED = 1,
 	INVERTED_RB = 2,
+	BOXDEBUG = 4,
+	DENOISE = 8,
 };
 
 class Kernel
@@ -29,23 +31,26 @@ public:
 	void RunFractalKernels(u32* img, f64 iTime);
 
 	// Ray tracing specific functions start here
-	void LoadMeshes(const std::vector<RayTracing::Mesh> meshes);
-	void LoadTextures(const std::vector<RayTracing::Texture> textures);
-	void LoadMaterials(const std::vector<RayTracing::Material> materials);
-	void UpdateMeshVertices(RayTracing::Mesh* mesh, u32 index, const Maths::Vec3& pos, const Maths::Quat& rot, const Maths::Vec3& scale);
+	void LoadMeshes(const std::vector<Resources::Mesh> meshes);
+	void LoadTextures(const std::vector<Resources::Texture> textures);
+	void LoadCubemaps(const std::vector<Resources::Cubemap> cubemaps);
+	void LoadMaterials(const std::vector<Resources::Material> materials);
+	void UpdateMeshVertices(Resources::Mesh* mesh, u32 index, const Maths::Vec3& pos, const Maths::Quat& rot, const Maths::Vec3& scale);
 	void Synchronize();
 	void RenderMeshes(u32* img, const u32 meshCount, const Maths::Vec3& pos, const Maths::Vec3& front, const Maths::Vec3& up, const f32 fov, const u32 quality, const LaunchParams params);
-	void UnloadMeshes(const std::vector<RayTracing::Mesh>& meshes);
-	void UnloadTextures(const std::vector<RayTracing::Texture>& textures);
+	void UnloadMeshes(const std::vector<Resources::Mesh>& meshes);
+	void UnloadTextures(const std::vector<Resources::Texture>& textures);
+	void UnloadCubemaps(const std::vector<Resources::Cubemap>& cubemaps);
 	void UnloadMaterials();
 	void SeedRNGBuffer();
 
 private:
-	RayTracing::Mesh* device_meshes = nullptr;
-	RayTracing::Texture* device_textures = nullptr;
-	RayTracing::Material* device_materials = nullptr;
-	RayTracing::FrameBuffer surfaceFB;
-	RayTracing::FrameBuffer mainFB;
+	Resources::Mesh* device_meshes = nullptr;
+	Resources::Texture* device_textures = nullptr;
+	Resources::Cubemap* device_cubemaps = nullptr;
+	Resources::Material* device_materials = nullptr;
+	Resources::FrameBuffer surfaceFB;
+	Resources::FrameBuffer mainFB;
 	curandState* device_prngBuffer = nullptr;
 	u64 rngBufferSize = 0;
 	s32 deviceID = 0;

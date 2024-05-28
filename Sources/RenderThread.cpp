@@ -2,41 +2,36 @@
 
 #include <assert.h>
 
-#include "RayTracing/Texture.cuh"
-#include "RayTracing/Mesh.cuh"
-#include "RayTracing/Material.hpp"
-#include "RayTracing/ModelLoader.hpp"
+#include "Resources/Texture.cuh"
+#include "Resources/Mesh.cuh"
+#include "Resources/Material.hpp"
+#include "Resources/ModelLoader.hpp"
 
 using namespace Maths;
-using namespace RayTracing;
+using namespace Resources;
+using namespace Compute;
 
-void RenderThread::Init(HWND hwnIn, IVec2 resIn, bool rtx)
+void RenderThread::Init(HWND hwnIn, IVec2 resIn)
 {
 	hwnd = hwnIn;
 	res = resIn;
-	if (rtx)
-	{
-		thread = std::thread(&RenderThread::RayTracingRealTime, this);
-	}
-	else
-	{
-		thread = std::thread(&RenderThread::MandelbrotRealTime, this);
-	}
+#ifdef RAY_TRACING
+	thread = std::thread(&RenderThread::RayTracingRealTime, this);
+#else
+	thread = std::thread(&RenderThread::MandelbrotRealTime, this);
+#endif
 }
 
-void RenderThread::Init(const Parameters& paramsIn, s32 id, bool rtx)
+void RenderThread::Init(const Parameters& paramsIn, s32 id)
 {
 	params = paramsIn;
 	threadID = id;
 	res = IVec2(params.targetResolution.x, params.targetResolution.y);
-	if (rtx)
-	{
-		thread = std::thread(&RenderThread::RayTracingFrames, this);
-	}
-	else
-	{
-		thread = std::thread(&RenderThread::MandelbrotFrames, this);
-	}
+#ifdef RAY_TRACING
+	thread = std::thread(&RenderThread::RayTracingFrames, this);
+#else
+	thread = std::thread(&RenderThread::MandelbrotFrames, this);
+#endif
 }
 
 void RenderThread::Resize(IVec2 newRes)
@@ -85,6 +80,13 @@ void RenderThread::SetKeyState(u8 key, bool state)
 {
 	keyLock.lock();
 	keys.set(key, state);
+	keyLock.unlock();
+}
+
+void RenderThread::ToggleKeyState(u8 key)
+{
+	keyLock.lock();
+	keys.flip(key);
 	keyLock.unlock();
 }
 
@@ -194,20 +196,8 @@ void RenderThread::MandelbrotFrames()
 void RenderThread::RayTracingRealTime()
 {
 	InitThread();
-	std::vector<Texture> textures;
-	std::vector<Material> materials;
-	std::vector<Mesh> meshes;
-	ModelLoader::LoadModel(meshes, materials, textures, "Assets/scene1.obj");
+	LoadAssets();
 
-	kernels.LoadTextures(textures);
-	kernels.LoadMaterials(materials);
-	kernels.LoadMeshes(meshes);
-
-	for (u32 i = 0; i < meshes.size(); ++i)
-	{
-		kernels.UpdateMeshVertices(&meshes[i], i, Vec3(0, 0, 0), Quat(), Vec3(1));
-	}
-	kernels.Synchronize();
 	f64 last = 0;
 	while (!exit.Load())
 	{
@@ -232,7 +222,8 @@ void RenderThread::RayTracingRealTime()
 			dir[i % 3] += (i > 2) ? -static_cast<f32>(keys.test(i)) : static_cast<f32>(keys.test(i));
 		}
 		f32 fovDir = static_cast<f32>(keys.test(6)) - static_cast<f32>(keys.test(7));
-		bool advanced = keys.test(8);
+		LaunchParams params = keys.test(9) ? BOXDEBUG : (keys.test(8) ? ADVANCED : NONE);
+		if (keys.test(10)) params = (LaunchParams)(params | DENOISE);
 		keyLock.unlock();
 		fov = Util::Clamp(fov + fovDir * deltaTime * fov, 0.5f, 100.0f);
 		Quat q = Quat::FromEuler(Vec3(rotation.x, rotation.y, 0.0f));
@@ -242,13 +233,10 @@ void RenderThread::RayTracingRealTime()
 			position += q * dir;
 		}
 		HandleResize();
-		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), position, q * Vec3(0,0,1), q * Vec3(0,1,0), fov, 1, advanced ? ADVANCED : NONE);
+		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), position, q * Vec3(0,0,1), q * Vec3(0,1,0), fov, 1, params);
 		CopyToScreen();
 	}
-	kernels.UnloadTextures(textures);
-	kernels.UnloadMaterials();
-	kernels.UnloadMeshes(meshes);
-	kernels.ClearKernels();
+	UnloadAssets();
 }
 
 void RenderThread::RayTracingFrames()
@@ -256,20 +244,8 @@ void RenderThread::RayTracingFrames()
 	std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
 	auto start = now.time_since_epoch();
 	InitThread();
-	std::vector<Texture> textures;
-	std::vector<Material> materials;
-	std::vector<Mesh> meshes;
-	ModelLoader::LoadModel(meshes, materials, textures, "Assets/scene1.obj");
-
-	kernels.LoadTextures(textures);
-	kernels.LoadMaterials(materials);
-	kernels.LoadMeshes(meshes);
-
-	for (u32 i = 0; i < meshes.size(); ++i)
-	{
-		kernels.UpdateMeshVertices(&meshes[i], i, Vec3(0, 0, 0), Quat(), Vec3(1));
-	}
-	kernels.Synchronize();
+	
+	LoadAssets();
 
 	u64 frame = static_cast<u64>(params.startFrame) + threadID;
 	f64 iTime = 1.0 / params.targetFPS * frame;
@@ -303,14 +279,37 @@ void RenderThread::RayTracingFrames()
 		queueLock.Store(false);
 	}
 
-	kernels.UnloadTextures(textures);
-	kernels.UnloadMaterials();
-	kernels.UnloadMeshes(meshes);
-	kernels.ClearKernels();
+	UnloadAssets();
 
 	now = std::chrono::system_clock::now();
 	auto duration = now.time_since_epoch() - start;
 	auto micros = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
 	elapsedTime = micros / 1000000.0f;
 	exit.Store(true);
+}
+
+void RenderThread::LoadAssets()
+{
+	ModelLoader::LoadModel(meshes, materials, textures, "Assets/Scenes/scene2.obj");
+	ModelLoader::LoadCubemap(cubemaps, "Assets/Cubemaps/sky_space.cbm");
+
+	kernels.LoadTextures(textures);
+	kernels.LoadCubemaps(cubemaps);
+	kernels.LoadMaterials(materials);
+	kernels.LoadMeshes(meshes);
+
+	for (u32 i = 0; i < meshes.size(); ++i)
+	{
+		kernels.UpdateMeshVertices(&meshes[i], i, Vec3(0, 0, 0), Quat(), Vec3(1));
+	}
+	kernels.Synchronize();
+}
+
+void RenderThread::UnloadAssets()
+{
+	kernels.UnloadTextures(textures);
+	kernels.UnloadCubemaps(cubemaps);
+	kernels.UnloadMaterials();
+	kernels.UnloadMeshes(meshes);
+	kernels.ClearKernels();
 }

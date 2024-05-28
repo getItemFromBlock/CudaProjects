@@ -39,14 +39,22 @@ struct FrameHolder
 	std::vector<u32> frameData;
 };
 
+namespace Resources
+{
+	class Texture;
+	class Cubemap;
+	class Material;
+	class Mesh;
+}
+
 class RenderThread
 {
 public:
 	RenderThread() {};
 	~RenderThread() {};
 
-	void Init(const Parameters& params, s32 id, bool rtx);
-	void Init(HWND hwnd, Maths::IVec2 res, bool rtx);
+	void Init(const Parameters& params, s32 id);
+	void Init(HWND hwnd, Maths::IVec2 res);
 	void Resize(Maths::IVec2 newRes);
 	bool HasFinished() const;
 	std::vector<FrameHolder> GetFrames();
@@ -54,6 +62,7 @@ public:
 	f32 GetElapsedTime();
 	void MoveMouse(Maths::Vec2 delta);
 	void SetKeyState(u8 key, bool state);
+	void ToggleKeyState(u8 key);
 private:
 	std::thread thread;
 	std::chrono::system_clock::duration start = std::chrono::system_clock::duration();
@@ -64,10 +73,14 @@ private:
 	Core::Signal queueLock;
 	std::mutex mouseLock;
 	std::mutex keyLock;
+	std::vector<Resources::Texture> textures;
+	std::vector<Resources::Cubemap> cubemaps;
+	std::vector<Resources::Material> materials;
+	std::vector<Resources::Mesh> meshes;
 	std::vector<u32> colorBuffer;
 	std::vector<FrameHolder> queuedFrames;
 	std::vector<FrameHolder> bufferedFrames;
-	std::bitset<9> keys = 0;
+	std::bitset<11> keys = 0;
 	Maths::IVec2 res;
 	Maths::IVec2 storedRes;
 	Maths::Vec2 storedDelta;
@@ -82,6 +95,8 @@ private:
 	void MandelbrotFrames();
 	void RayTracingRealTime();
 	void RayTracingFrames();
+	void LoadAssets();
+	void UnloadAssets();
 	void CopyToScreen();
 	void RunKernels();
 	void HandleResize();

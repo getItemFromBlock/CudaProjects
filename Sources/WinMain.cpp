@@ -57,13 +57,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
         ShowWindow(hWnd, nCmdShow);
         UpdateWindow(hWnd);
 
-        th.Init(hWnd, Maths::IVec2(800, 600), 
-#ifdef RAY_TRACING
-            true
-#else
-            false
-#endif
-            );
+        th.Init(hWnd, Maths::IVec2(800, 600));
         LONG_PTR lExStyle = GetWindowLongPtr(hWnd, GWL_EXSTYLE);
         lExStyle &= ~(WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE);
         SetWindowLongPtr(hWnd, GWL_EXSTYLE, lExStyle);
@@ -180,8 +174,14 @@ void SetKeyState(WPARAM wParam, bool pressed)
     case VK_DOWN:
         th.SetKeyState(7, pressed);
         break;
-    case VK_RETURN:
-        th.SetKeyState(8, pressed);
+    case VK_F3:
+        if (pressed) th.ToggleKeyState(9);
+        break;
+    case VK_F4:
+        if (pressed) th.ToggleKeyState(8);
+        break;
+    case VK_F5:
+        if (pressed) th.ToggleKeyState(10);
         break;
     default:
         break;
