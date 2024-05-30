@@ -171,11 +171,11 @@ __device__ Vec4 smartDeNoise(const FrameBuffer& tex, Vec2 uv, f32 sigma, f32 kSi
     f32 invThresholdSqx2 = 0.5f / (threshold * threshold);     // 1.0 / (sigma^2 * 2.0)
     f32 invThresholdSqrt2PI = INV_SQRT_OF_2PI / threshold;   // 1.0 / (sqrt(2*PI) * sigma)
 
+    Vec2 size = Vec2(tex.GetResolution());
     Vec4 centrPx = tex.SampleVec(uv);
 
     f32 zBuff = 0;
     Vec4 aBuff = Vec4(0);
-    Vec2 size = Vec2(tex.GetResolution());
 
     for (f32 x = -radius; x <= radius; x++) {
         f32 pt = sqrtf(radQ - x * x);  // pt = yRadius: have circular trend
@@ -184,7 +184,9 @@ __device__ Vec4 smartDeNoise(const FrameBuffer& tex, Vec2 uv, f32 sigma, f32 kSi
 
             f32 blurFactor = expf(-d.Dot(d) * invSigmaQx2) * invSigmaQx2PI;
 
-            Vec4 walkPx = tex.SampleVec(uv + d / size);
+            IVec2 c = IVec2(uv + d);
+            c = Util::Clamp(c, IVec2(), tex.GetResolution());
+            Vec4 walkPx = tex.SampleVec(c);
 
             Vec4 dC = walkPx - centrPx;
             f32 deltaFactor = exp(-dC.Dot(dC) * invThresholdSqx2) * invThresholdSqrt2PI * blurFactor;
@@ -295,6 +297,12 @@ __global__ void RayTracingKernel(FrameBuffer fb, curandState* const globalState,
     Vec3 color = GetColor(r, globalState, index, meshes, mats, texs, cbs, meshCount);
 
     Vec4 lastFrameColor = fb.SampleVec(pixel);
+
+    /*
+    lastFrameColor = lastFrameColor * 100.0f;
+    lastFrameColor = (Vec4(color, 1.0f) + lastFrameColor) / 101.0f;
+    fb.Write(pixel, lastFrameColor);
+    */
     f32 blend = lastFrameColor.w == 0.0f ? 1.0f : 1.0f / (1.0f + (1.0f / lastFrameColor.w));
     color = Util::Lerp(lastFrameColor.GetVector(), color, blend);
 
@@ -312,13 +320,13 @@ __global__ void CopyKernel(const FrameBuffer source, FrameBuffer destination, co
 }
 
 // WARNING: The two framebuffers MUST have the same resolution
-__global__ void CopyKernelDenoise(const FrameBuffer source, FrameBuffer destination, const f32 colorMultiplier)
+__global__ void CopyKernelDenoise(const FrameBuffer source, FrameBuffer destination, const f32 strength)
 {
     u64 index = threadIdx.x + static_cast<u64>(blockIdx.x) * blockDim.x;
     if (index >= static_cast<u64>(source.resolution.x) * source.resolution.y) return;
     Maths::IVec2 pixel = Maths::IVec2(index % source.resolution.x, index / source.resolution.x);
 
-    Vec4 c = smartDeNoise(source, pixel, 5.0f, 1.0f, 0.2f);
+    Vec4 c = smartDeNoise(source, Vec2(pixel), 5.0f, 1.0f, strength);
     destination.Write(pixel, c);
 
     // https://www.shadertoy.com/view/3lcfDM
@@ -492,7 +500,7 @@ void Kernel::UpdateMeshVertices(Mesh* mesh, u32 index, const Maths::Vec3& pos, c
 }
 
 bool wasdebug = true;
-void Kernel::LaunchRTXKernels(const u32 meshCount, const Vec3& pos, const Vec3& front, const Vec3& up, const f32 fov, const u32 quality, const LaunchParams params)
+void Kernel::LaunchRTXKernels(const u32 meshCount, const Vec3& pos, const Vec3& front, const Vec3& up, const f32 fov, const u32 quality, const f32 strength, const LaunchParams params)
 {
     const u32 count = mainFB.resolution.x * mainFB.resolution.y;
     if (params & ADVANCED)
@@ -506,7 +514,7 @@ void Kernel::LaunchRTXKernels(const u32 meshCount, const Vec3& pos, const Vec3& 
         }
         if (params & DENOISE)
         {
-            CopyKernelDenoise CUDA_KERNEL((count + M - 1) / M, M) (mainFB, surfaceFB, 1.0f / (quality));
+            CopyKernelDenoise CUDA_KERNEL((count + M - 1) / M, M) (mainFB, surfaceFB, strength);
         }
         else
         {
@@ -525,9 +533,9 @@ void Kernel::LaunchRTXKernels(const u32 meshCount, const Vec3& pos, const Vec3& 
     }
 }
 
-void Kernel::RenderMeshes(u32* img, const u32 meshCount, const Vec3& pos, const Vec3& front, const Vec3& up, const f32 fov, const u32 quality, const LaunchParams params)
+void Kernel::RenderMeshes(u32* img, const u32 meshCount, const Vec3& pos, const Vec3& front, const Vec3& up, const f32 fov, const u32 quality, const f32 strength, const LaunchParams params)
 {
-    LaunchRTXKernels(meshCount, pos, front, up, fov, quality, params);
+    LaunchRTXKernels(meshCount, pos, front, up, fov, quality, strength, params);
     CudaUtil::CheckError(cudaGetLastError(), "RayTracingKernelDebug launch failed: %s");
     CudaUtil::SynchronizeDevice();
     CudaUtil::CopyFrameBuffer(surfaceFB, img, CudaUtil::CopyType::DToH);
@@ -614,4 +622,9 @@ void Kernel::LoadMaterials(const std::vector<Material> materials)
     if (materials.size() == 0) return;
     device_materials = CudaUtil::Allocate<Material>(materials.size());
     CudaUtil::Copy(materials.data(), device_materials, sizeof(Material) * materials.size(), CudaUtil::CopyType::HToD);
+}
+
+const FrameBuffer& Kernel::GetMainFrameBuffer()
+{
+    return mainFB;
 }

@@ -16,12 +16,6 @@
 
 #include "Types.hpp"
 
-#ifdef NAT_EngineDLL
-#define NAT_API __declspec(dllexport)
-#else
-#define NAT_API
-#endif
-
 #ifdef __CUDACC__
 #define CUDA_FUNCTION __host__ __device__
 #else
@@ -37,7 +31,7 @@ namespace Maths
     class Vec2;
     class Quat;
 
-    class NAT_API IVec2
+    class IVec2
     {
     public:
         s32 x, y;
@@ -93,7 +87,7 @@ namespace Maths
         CUDA_FUNCTION inline bool operator!=(const IVec2 b) const;
     };
 
-    class NAT_API Vec2
+    class Vec2
     {
     public:
         f32 x;
@@ -199,7 +193,7 @@ namespace Maths
 
     class Vec3;
 
-    class NAT_API IVec3
+    class IVec3
     {
     public:
         s32 x, y, z;
@@ -246,7 +240,7 @@ namespace Maths
         CUDA_FUNCTION inline s32& operator[](const size_t a);
     };
 
-    class NAT_API Vec3
+    class Vec3
     {
     public:
         f32 x;
@@ -347,7 +341,7 @@ namespace Maths
 
     class Vec4;
 
-    class NAT_API Color4
+    class Color4
     {
     public:
         u8 r;
@@ -365,7 +359,7 @@ namespace Maths
         CUDA_FUNCTION inline Color4 operator+(const Color4& a) const;
     };
 
-    class NAT_API Vec4
+    class Vec4
     {
     public:
         f32 x;
@@ -471,7 +465,7 @@ namespace Maths
 
     class Mat3;
 
-    class NAT_API Mat4
+    class Mat4
     {
     public:
         /* data of the matrix : content[y][x]
@@ -569,7 +563,7 @@ namespace Maths
 
     };
 
-    class NAT_API Mat3
+    class Mat3
     {
     public:
         /* data of the matrix : content[y][x]
@@ -637,7 +631,7 @@ namespace Maths
         CUDA_FUNCTION f32 GetDeterminant(f32 n);
     };
 
-    class NAT_API Quat
+    class Quat
     {
     public:
         Vec3 v;
@@ -709,7 +703,7 @@ namespace Maths
 #endif
     };
 
-    class NAT_API Frustum
+    class Frustum
     {
     public:
         CUDA_FUNCTION Frustum() {}
@@ -723,7 +717,7 @@ namespace Maths
         Vec4 back;
     };
 
-    class NAT_API AABB
+    class AABB
     {
     public:
         CUDA_FUNCTION AABB() {}
@@ -740,87 +734,89 @@ namespace Maths
     namespace Util
     {
         // Return the given angular value in degrees converted to radians
-        CUDA_FUNCTION inline NAT_API f32 ToRadians(f32 in);
+        CUDA_FUNCTION inline f32 ToRadians(f32 in);
 
         // Return the given angular value in radians converted to degrees
-        CUDA_FUNCTION inline NAT_API f32 ToDegrees(f32 in);
+        CUDA_FUNCTION inline f32 ToDegrees(f32 in);
 
-        CUDA_FUNCTION inline NAT_API f32 Clamp(f32 in, f32 min = 0.0f, f32 max = 1.0f);
+        CUDA_FUNCTION inline f32 Clamp(f32 in, f32 min = 0.0f, f32 max = 1.0f);
 
-        CUDA_FUNCTION inline NAT_API Vec2 Clamp(Vec2 in, f32 min = 0.0f, f32 max = 1.0f);
+        CUDA_FUNCTION inline Vec2 Clamp(Vec2 in, f32 min = 0.0f, f32 max = 1.0f);
 
-        CUDA_FUNCTION inline NAT_API Vec3 Clamp(Vec3 in, f32 min = 0.0f, f32 max = 1.0f);
+        CUDA_FUNCTION inline Vec2 Clamp(IVec2 in, IVec2 min, IVec2 max);
 
-        CUDA_FUNCTION inline NAT_API Vec4 Clamp(Vec4 in, f32 min = 0.0f, f32 max = 1.0f);
+        CUDA_FUNCTION inline Vec3 Clamp(Vec3 in, f32 min = 0.0f, f32 max = 1.0f);
 
-        CUDA_FUNCTION inline NAT_API f32 Abs(f32 in);
+        CUDA_FUNCTION inline Vec4 Clamp(Vec4 in, f32 min = 0.0f, f32 max = 1.0f);
 
-        CUDA_FUNCTION inline NAT_API Vec2 Abs(Vec2 in);
+        CUDA_FUNCTION inline f32 Abs(f32 in);
 
-        CUDA_FUNCTION inline NAT_API Vec3 Abs(Vec3 in);
+        CUDA_FUNCTION inline Vec2 Abs(Vec2 in);
 
-        CUDA_FUNCTION inline NAT_API Vec4 Abs(Vec4 in);
+        CUDA_FUNCTION inline Vec3 Abs(Vec3 in);
 
-        CUDA_FUNCTION inline NAT_API s32 IClamp(s32 in, s32 min, s32 max);
+        CUDA_FUNCTION inline Vec4 Abs(Vec4 in);
 
-        CUDA_FUNCTION inline NAT_API u32 UClamp(u32 in, u32 min, u32 max);
+        CUDA_FUNCTION inline s32 IClamp(s32 in, s32 min, s32 max);
 
-        CUDA_FUNCTION inline NAT_API f32 Lerp(f32 a, f32 b, f32 delta);
+        CUDA_FUNCTION inline u32 UClamp(u32 in, u32 min, u32 max);
 
-        CUDA_FUNCTION inline NAT_API Vec3 Lerp(Vec3 a, Vec3 b, f32 delta);
+        CUDA_FUNCTION inline f32 Lerp(f32 a, f32 b, f32 delta);
 
-        CUDA_FUNCTION inline NAT_API f32 Mod(f32 in, f32 value);
+        CUDA_FUNCTION inline Vec3 Lerp(Vec3 a, Vec3 b, f32 delta);
 
-        CUDA_FUNCTION inline NAT_API Vec2 Mod(Vec2 in, f32 value);
+        CUDA_FUNCTION inline f32 Mod(f32 in, f32 value);
 
-        CUDA_FUNCTION inline NAT_API Vec3 Mod(Vec3 in, f32 value);
+        CUDA_FUNCTION inline Vec2 Mod(Vec2 in, f32 value);
 
-        CUDA_FUNCTION inline NAT_API s32 IMod(s32 in, s32 value);
+        CUDA_FUNCTION inline Vec3 Mod(Vec3 in, f32 value);
 
-        CUDA_FUNCTION inline NAT_API f32 MinF(f32 a, f32 b);
+        CUDA_FUNCTION inline s32 IMod(s32 in, s32 value);
 
-        CUDA_FUNCTION inline NAT_API f32 MaxF(f32 a, f32 b);
+        CUDA_FUNCTION inline f32 MinF(f32 a, f32 b);
 
-        CUDA_FUNCTION inline NAT_API Vec3 MinV(Vec3 a, Vec3 b);
+        CUDA_FUNCTION inline f32 MaxF(f32 a, f32 b);
 
-        CUDA_FUNCTION inline NAT_API Vec3 MaxV(Vec3 a, Vec3 b);
+        CUDA_FUNCTION inline Vec3 MinV(Vec3 a, Vec3 b);
 
-        CUDA_FUNCTION inline NAT_API s32 MinI(s32 a, s32 b);
+        CUDA_FUNCTION inline Vec3 MaxV(Vec3 a, Vec3 b);
 
-        CUDA_FUNCTION inline NAT_API s32 MaxI(s32 a, s32 b);
+        CUDA_FUNCTION inline s32 MinI(s32 a, s32 b);
+
+        CUDA_FUNCTION inline s32 MaxI(s32 a, s32 b);
 
         // Smooth min function
-        CUDA_FUNCTION inline NAT_API f32 SMin(f32 a, f32 b, f32 delta);
+        CUDA_FUNCTION inline f32 SMin(f32 a, f32 b, f32 delta);
 
-        CUDA_FUNCTION inline NAT_API bool IsNear(f32 a, f32 b, f32 prec = 0.0001f);
+        CUDA_FUNCTION inline bool IsNear(f32 a, f32 b, f32 prec = 0.0001f);
 
         // Returns a string with the hex representation of number
         // TODO Test parity with big/little endian
-        inline NAT_API std::string GetHex(u64 number);
+        inline std::string GetHex(u64 number);
 
         // Fills the given buffer with the hex representation of number
         // WARNING: buffer must be at least 16 char long
         // TODO Test parity with big/little endian
-        inline NAT_API void GetHex(char* buffer, u64 number);
+        inline void GetHex(char* buffer, u64 number);
 
-        inline NAT_API u64 ReadHex(const std::string& input);
+        inline u64 ReadHex(const std::string& input);
 
         // Set of functions used to generate some shapes
         // TODO is this still relevant ?
 
-        void NAT_API GenerateSphere(s32 x, s32 y, std::vector<Vec3>* PosOut, std::vector<Vec3>* NormOut, std::vector<Vec2>* UVOut);
+        void GenerateSphere(s32 x, s32 y, std::vector<Vec3>* PosOut, std::vector<Vec3>* NormOut, std::vector<Vec2>* UVOut);
 
-        void NAT_API GenerateCube(std::vector<Vec3>* PosOut, std::vector<Vec3>* NormOut, std::vector<Vec2>* UVOut);
+        void GenerateCube(std::vector<Vec3>* PosOut, std::vector<Vec3>* NormOut, std::vector<Vec2>* UVOut);
 
-        void NAT_API GenerateDome(s32 x, s32 y, bool reversed, std::vector<Vec3>* PosOut, std::vector<Vec3>* NormOut, std::vector<Vec2>* UVOut);
+        void GenerateDome(s32 x, s32 y, bool reversed, std::vector<Vec3>* PosOut, std::vector<Vec3>* NormOut, std::vector<Vec2>* UVOut);
 
-        void NAT_API GenerateCylinder(s32 x, s32 y, std::vector<Vec3>* PosOut, std::vector<Vec3>* NormOut, std::vector<Vec2>* UVOut);
+        void GenerateCylinder(s32 x, s32 y, std::vector<Vec3>* PosOut, std::vector<Vec3>* NormOut, std::vector<Vec2>* UVOut);
 
-        void NAT_API GeneratePlane(std::vector<Vec3>* PosOut, std::vector<Vec3>* NormOut, std::vector<Vec2>* UVOut);
+        void GeneratePlane(std::vector<Vec3>* PosOut, std::vector<Vec3>* NormOut, std::vector<Vec2>* UVOut);
 
-        void NAT_API GenerateSkyPlane(std::vector<Vec3>* PosOut, std::vector<Vec3>* NormOut, std::vector<Vec2>* UVOut);
+        void GenerateSkyPlane(std::vector<Vec3>* PosOut, std::vector<Vec3>* NormOut, std::vector<Vec2>* UVOut);
 
-        Vec3 NAT_API GetSphericalCoord(f32 longitude, f32 latitude);
+        Vec3 GetSphericalCoord(f32 longitude, f32 latitude);
     };
 }
 

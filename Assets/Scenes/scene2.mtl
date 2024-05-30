@@ -1,4 +1,4 @@
-# Blender 3.6.0 MTL File: 'scene1.blend'
+# Blender 3.4.1 MTL File: 'scene2.blend'
 # www.blender.org
 
 newmtl Emerald
@@ -9,14 +9,13 @@ Ni 1.450000
 d 1.000000
 illum 2
 Pr 0.000000
-Pm 0.200000
+Pm 0.000000
 Ps 0.000000
 Pc 0.000000
 Pcr 0.030000
 aniso 0.000000
 anisor 0.000000
 Tf 1.000000 1.000000 1.000000
-map_Pr gold-scuffed-bl/gold-scuffed_roughness.png
 
 newmtl Gold
 Ks 0.500000 0.500000 0.500000
@@ -32,12 +31,26 @@ Pcr 0.030000
 aniso 0.000000
 anisor 0.000000
 map_Kd gold-scuffed-bl/gold-scuffed_basecolor-boosted.png
-map_Pr gold-scuffed-bl/gold-scuffed_roughness.png
+
+newmtl Ground
+Kd 0.397220 0.397220 0.397220
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+Pr 0.500000
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
 
 newmtl Neon
 Kd 0.800000 0.800000 0.800000
 Ks 0.500000 0.500000 0.500000
-Ke 20.000000 20.000000 20.000000
+Ke 100.000000 100.000000 100.000000
 Ni 1.450000
 d 1.000000
 illum 2
@@ -56,29 +69,43 @@ Ni 1.450000
 d 1.000000
 illum 2
 Pr 0.500000
-Pm 0.100000
+Pm 0.000000
 Ps 0.000000
 Pc 0.000000
 Pcr 0.030000
 aniso 0.000000
 anisor 0.000000
 map_Kd patterned-bw-vinyl-bl/patterned-bw-vinyl_albedo.png
-map_Pr patterned-bw-vinyl-bl/patterned-bw-vinyl_roughness.png
 map_Bump -bm 1.000000 patterned-bw-vinyl-bl/patterned-bw-vinyl_normal-ogl.png
 
-newmtl Planks
+newmtl Ruby
+Kd 0.800000 0.007598 0.022455
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+Pr 0.000000
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+Tf 1.000000 1.000000 1.000000
+
+newmtl Saphire
+Kd 0.009789 0.031261 0.800000
 Ks 0.500000 0.500000 0.500000
 Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
 Pr 0.500000
-Pm 0.300000
+Pm 0.000000
 Ps 0.000000
 Pc 0.000000
 Pcr 0.030000
 aniso 0.000000
 anisor 0.000000
-map_Kd tavern-wood-planks1-bl/tavern-wood-planks1_albedo.png
-map_Pr tavern-wood-planks1-bl/tavern-wood-planks1_roughness.png
-map_Bump -bm 1.000000 tavern-wood-planks1-bl/tavern-wood-planks1_normal-ogl.png
+Tf 1.000000 1.000000 1.000000

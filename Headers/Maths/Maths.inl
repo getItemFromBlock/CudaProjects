@@ -1206,6 +1206,13 @@ namespace Maths
         return in;
     }
 
+    inline Vec2 Util::Clamp(IVec2 in, IVec2 min, IVec2 max)
+    {
+        in.x = IClamp(in.x, min.x, max.x-1);
+        in.y = IClamp(in.y, min.y, max.y-1);
+        return in;
+    }
+
     inline Vec3 Util::Clamp(Vec3 in, f32 min, f32 max)
     {
         for (u8 i = 0; i < 3; ++i)

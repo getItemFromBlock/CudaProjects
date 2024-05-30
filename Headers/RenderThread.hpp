@@ -80,7 +80,7 @@ private:
 	std::vector<u32> colorBuffer;
 	std::vector<FrameHolder> queuedFrames;
 	std::vector<FrameHolder> bufferedFrames;
-	std::bitset<11> keys = 0;
+	std::bitset<14> keys = 0;
 	Maths::IVec2 res;
 	Maths::IVec2 storedRes;
 	Maths::Vec2 storedDelta;
@@ -90,6 +90,7 @@ private:
 	Parameters params;
 	s32 threadID = -1;
 	f32 elapsedTime = 0;
+	f32 denoiseStrength = 0.2f;
 
 	void MandelbrotRealTime();
 	void MandelbrotFrames();

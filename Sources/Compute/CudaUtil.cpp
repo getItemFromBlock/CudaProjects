@@ -8,6 +8,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+#include "stb_image_write.h"
+
 #include "Resources/Texture.cuh"
 #include "Resources/MipmappedTexture.cuh"
 #include "Resources/Cubemap.cuh"
@@ -251,6 +253,30 @@ bool CudaUtil::LoadTexture(Texture& tex, const std::string& path)
     // Create texture object
     CheckError(cudaCreateTextureObject(&tex.device_tex, &resDesc, &texDesc, NULL));
     return true;
+}
+
+bool CudaUtil::SaveFrameBuffer(const Resources::FrameBuffer& fb, std::string path)
+{
+    if (fb.resolution.x <= 0 || fb.resolution.y <= 0) return false;
+    u64 size = fb.type == ChannelType::U8 ? 4 : 16;
+    u64 len = fb.resolution.x * fb.resolution.y * size;
+    u64 spitch = fb.resolution.x * size;
+    void* ptr = malloc(len);
+    if (!ptr) return false;
+    CheckError(cudaMemcpy2DFromArray(ptr, spitch, fb.device_data, 0, 0, spitch, fb.resolution.y, cudaMemcpyDeviceToHost));
+    s32 ret;
+    if (size == 16)
+    {
+        path += ".hdr";
+        ret = stbi_write_hdr(path.c_str(), fb.resolution.x, fb.resolution.y, 4, reinterpret_cast<f32*>(ptr));
+    }
+    else
+    {
+        path += ".png";
+        ret = stbi_write_png(path.c_str(), fb.resolution.x, fb.resolution.y, 4, ptr, size);
+    }
+    free(ptr);
+    return ret == 0;
 }
 
 bool CudaUtil::UnloadTexture(const Texture& tex)

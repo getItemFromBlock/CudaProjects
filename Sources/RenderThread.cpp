@@ -1,5 +1,7 @@
 #include "RenderThread.hpp"
 
+#include <filesystem>
+#include <time.h>
 #include <assert.h>
 
 #include "Resources/Texture.cuh"
@@ -10,6 +12,17 @@
 using namespace Maths;
 using namespace Resources;
 using namespace Compute;
+
+
+std::string GetTime()
+{
+	time_t timeObj;
+	time(&timeObj);
+	tm* pTime = gmtime(&timeObj);
+	char buffer[256];
+	sprintf(buffer, "%d-%d-%d_%d-%d-%d", pTime->tm_year+1900, pTime->tm_mon+1, pTime->tm_mday, pTime->tm_hour, pTime->tm_min, pTime->tm_sec);
+	return std::string(buffer);
+}
 
 void RenderThread::Init(HWND hwnIn, IVec2 resIn)
 {
@@ -224,6 +237,16 @@ void RenderThread::RayTracingRealTime()
 		f32 fovDir = static_cast<f32>(keys.test(6)) - static_cast<f32>(keys.test(7));
 		LaunchParams params = keys.test(9) ? BOXDEBUG : (keys.test(8) ? ADVANCED : NONE);
 		if (keys.test(10)) params = (LaunchParams)(params | DENOISE);
+		if (keys.test(12))
+		{
+			keys.reset(12);
+			denoiseStrength += 0.05f;
+		}
+		if (keys.test(13))
+		{
+			keys.reset(13);
+			denoiseStrength -= 0.05f;
+		}
 		keyLock.unlock();
 		fov = Util::Clamp(fov + fovDir * deltaTime * fov, 0.5f, 100.0f);
 		Quat q = Quat::FromEuler(Vec3(rotation.x, rotation.y, 0.0f));
@@ -233,8 +256,19 @@ void RenderThread::RayTracingRealTime()
 			position += q * dir;
 		}
 		HandleResize();
-		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), position, q * Vec3(0,0,1), q * Vec3(0,1,0), fov, 1, params);
+		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), position, q * Vec3(0,0,1), q * Vec3(0,1,0), fov, 1, denoiseStrength, params);
 		CopyToScreen();
+		if (keys.test(11))
+		{
+			if (!std::filesystem::exists("Screenshots"))
+			{
+				std::filesystem::create_directory("Screenshots");
+			}
+			std::string name = "Screenshots/";
+			name += GetTime();
+			CudaUtil::SaveFrameBuffer(kernels.GetMainFrameBuffer(), name);
+			keys.reset(11);
+		}
 	}
 	UnloadAssets();
 }
@@ -253,7 +287,7 @@ void RenderThread::RayTracingFrames()
 	while (iTime < LENGTH2 && !exit.Load())
 	{
 		Quat q = Quat::FromEuler(Vec3(rotation.x, rotation.y, 0.0f));
-		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), position, q * Vec3(0, 0, 1), q * Vec3(0, 1, 0), fov, params.quality, static_cast<LaunchParams>(ADVANCED | INVERTED_RB));
+		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), position, q * Vec3(0, 0, 1), q * Vec3(0, 1, 0), fov, params.quality, 0.2f, static_cast<LaunchParams>(ADVANCED | INVERTED_RB));
 
 		FrameHolder fr;
 		fr.frameData = colorBuffer;

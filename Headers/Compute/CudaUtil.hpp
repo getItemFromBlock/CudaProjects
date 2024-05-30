@@ -45,6 +45,7 @@ namespace Compute
 		void PrintDevicesName();
 		bool LoadMipmappedTexture(Resources::MipmappedTexture& tex, const std::string& path);
 		bool LoadTexture(Resources::Texture& tex, const std::string& path);
+		bool SaveFrameBuffer(const Resources::FrameBuffer& fb, std::string path);
 		std::vector<f32*> GenerateTextureMipMaps(f32* source, Maths::IVec2 resolution, u32& maxLOD);
 		bool UnloadTexture(const Resources::Texture& tex);
 		bool LoadCubemap(Resources::Cubemap& tex, const std::string& path);

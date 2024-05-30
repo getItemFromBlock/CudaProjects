@@ -183,6 +183,15 @@ void SetKeyState(WPARAM wParam, bool pressed)
     case VK_F5:
         if (pressed) th.ToggleKeyState(10);
         break;
+    case VK_F2:
+        if (pressed) th.ToggleKeyState(11);
+        break;
+    case VK_RIGHT:
+        if (pressed) th.SetKeyState(12, true);
+        break;
+    case VK_LEFT:
+        if (pressed) th.SetKeyState(13, true);
+        break;
     default:
         break;
     }
