@@ -96,6 +96,7 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <CodeGeneration>compute_70,sm_70</CodeGeneration>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
+      <AdditionalOptions>-allow-unsupported-compiler %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_V|x64'">
@@ -117,6 +118,7 @@
       <GPUDebugInfo>true</GPUDebugInfo>
       <AdditionalCompilerOptions>
       </AdditionalCompilerOptions>
+      <AdditionalOptions>-allow-unsupported-compiler %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -139,6 +141,7 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <CodeGeneration>compute_70,sm_70</CodeGeneration>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
+      <AdditionalOptions>-allow-unsupported-compiler %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_RTX|x64'">
@@ -161,6 +164,7 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <CodeGeneration>compute_70,sm_70</CodeGeneration>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
+      <AdditionalOptions>-allow-unsupported-compiler %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>

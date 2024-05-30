@@ -324,8 +324,8 @@ void RenderThread::RayTracingFrames()
 
 void RenderThread::LoadAssets()
 {
-	ModelLoader::LoadModel(meshes, materials, textures, "Assets/Scenes/scene3.obj");
-	ModelLoader::LoadCubemap(cubemaps, "Assets/Cubemaps/hall.cbm");
+	ModelLoader::LoadModel(meshes, materials, textures, "Assets/Scenes/scene1_alt.obj");
+	ModelLoader::LoadCubemap(cubemaps, "Assets/Cubemaps/sky_space.cbm");
 
 	kernels.LoadTextures(textures);
 	kernels.LoadCubemaps(cubemaps);
