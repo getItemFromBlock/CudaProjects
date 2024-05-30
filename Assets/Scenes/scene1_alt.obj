@@ -1,6 +1,6 @@
 # Blender 3.4.1
 # www.blender.org
-mtllib scene2.mtl
+mtllib scene1_alt.mtl
 o Emerald
 v 3.500000 0.000000 -2.500000
 v 2.776393 0.552781 -3.025725

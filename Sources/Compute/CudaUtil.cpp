@@ -219,16 +219,19 @@ bool CudaUtil::LoadMipmappedTexture(MipmappedTexture& tex, const std::string& pa
 bool CudaUtil::LoadTexture(Texture& tex, const std::string& path)
 {
     s32 comp;
+    stbi_ldr_to_hdr_gamma(1.0f);
     f32* data = stbi_loadf(path.c_str(), &tex.resolution.x, &tex.resolution.y, &comp, 4);
     if (!data)
     {
         std::cerr << "Unable to load texture: " << path << " : " << stbi_failure_reason() << std::endl;
     }
     if (tex.resolution.x <= 0 || tex.resolution.y <= 0 || !data) return false;
+    /*
     for (u64 i = 0; i < 4llu * tex.resolution.x * tex.resolution.y; ++i)
     {
         data[i] = powf(data[i], 1 / 2.3f);
     }
+    */
     const s32 fsize = sizeof(f32) * 8;
     cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(fsize, fsize, fsize, fsize, cudaChannelFormatKindFloat);
     CheckError(cudaMallocArray(&tex.device_data, &channelDesc, tex.resolution.x, tex.resolution.y));
@@ -268,7 +271,12 @@ bool CudaUtil::SaveFrameBuffer(const Resources::FrameBuffer& fb, std::string pat
     if (size == 16)
     {
         path += ".hdr";
-        ret = stbi_write_hdr(path.c_str(), fb.resolution.x, fb.resolution.y, 4, reinterpret_cast<f32*>(ptr));
+        f32* data = reinterpret_cast<f32*>(ptr);
+        for (u64 i = 0; i < 4llu * fb.resolution.x * fb.resolution.y; ++i)
+        {
+            data[i] = powf(data[i], 2.2f);
+        }
+        ret = stbi_write_hdr(path.c_str(), fb.resolution.x, fb.resolution.y, 4, data);
     }
     else
     {
