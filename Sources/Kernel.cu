@@ -211,7 +211,7 @@ __device__ Vec3 GetColor(Ray r, curandState* const globalState, const u64 index,
         result = RayTrace(r, meshes, materials, meshCount, far, mat, inverted);
         if (result.dist < 0)
         {
-            output += cbs[0].Sample(r.dir).GetVector() * throughput * 2;
+            output += cbs[0].Sample(r.dir).GetVector() * throughput * 1.0f;
             break;
         }
         Vec3 normal;
@@ -387,17 +387,19 @@ __global__ void RayTracingKernelDebug(FrameBuffer fb, const Mesh* meshes, const 
     Vec3 right = front.Cross(up);
     Ray r = Ray(pos, right * coord.x - up * coord.y + front * fov);
     f32 far = 100000.0f;
-    Vec3 color = Vec3(0.5f);
+    Vec3 output = Vec3(0.5f);
+    u32 hitCount = 0;
     for (u32 i = 0; i < meshCount; ++i)
     {
         f32 hit = meshes[i].BoundsCheck(r, Maths::Vec2(0.0f, far));
         if (hit > far) continue;
-        far = hit;
         u32 a = i >> 1;
         u32 b = a >> 1;
-        color = Vec3(i & 0x1, a & 0x1, b & 0x1);
+        Vec3 color = Vec3(i & 0x1, a & 0x1, b & 0x1);
+        output = (output * hitCount + color) / (hitCount + 1);
+        hitCount++;
     }
-    fb.Write(pixel, color);
+    fb.Write(pixel, output);
 }
 
 __global__ void VerticeKernel(Mesh* meshes, u32 meshIndex, Vec3 pos, Quat rot, Vec3 scale)
