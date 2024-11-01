@@ -1,4 +1,5 @@
 #include "Compute/RayTracing.cuh"
+#include "Resources/Material.hpp"
 
 using namespace Maths;
 using namespace Compute;
@@ -135,4 +136,10 @@ f32 RayTracing::HitBox(Ray ray, const Box& box, Vec2 bounds)
     f32 distance = (sgn.x != 0.0) ? distanceToPlane.x : ((sgn.y != 0.0) ? distanceToPlane.y : (sgn.z != 0 ? distanceToPlane.z : INFINITY));
     if (distance < bounds.x || distance > bounds.y) distance = INFINITY;
     return distance;
+}
+
+void Compute::RayTracing::ApplyMaterialDisplacement(Ray& r, const Resources::Material* mat)
+{
+    r.pos += mat->posDisplacement;
+    r.dir = mat->rotDisplacement * r.dir;
 }

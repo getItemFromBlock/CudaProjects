@@ -4,6 +4,11 @@
 
 #include "Maths/Maths.cuh"
 
+namespace Resources
+{
+    class Material;
+}
+
 namespace Compute
 {
     struct Vertice
@@ -70,5 +75,7 @@ namespace Compute
         __host__ __device__ HitRecord HitTriangle(const Ray& r, Maths::Vec3 vertices[3], Maths::Vec2 bounds);
 
         __host__ __device__ f32 HitBox(Ray r, const Box& box, Maths::Vec2 bounds);
+
+        __host__ __device__ void ApplyMaterialDisplacement(Ray& r, const Resources::Material* mat);
     }
 }

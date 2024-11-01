@@ -25,5 +25,5 @@ __device__ Vec4 Texture::Sample(Vec2 uv, Vec2 dX, Vec2 dY) const
 
 __host__ u32 Texture::GetMaxLOD(Maths::IVec2 res)
 {
-	return 1 + floor(log2(max(res.x, res.y)));
+	return 1 + (u32)(floor(log2(max(res.x, res.y))));
 }

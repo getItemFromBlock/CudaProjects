@@ -281,7 +281,7 @@ bool CudaUtil::SaveFrameBuffer(const Resources::FrameBuffer& fb, std::string pat
     else
     {
         path += ".png";
-        ret = stbi_write_png(path.c_str(), fb.resolution.x, fb.resolution.y, 4, ptr, size);
+        ret = stbi_write_png(path.c_str(), fb.resolution.x, fb.resolution.y, 4, ptr, (s32)(size));
     }
     free(ptr);
     return ret == 0;

@@ -206,7 +206,7 @@ __device__ Vec3 GetColor(Ray r, curandState* const globalState, const u64 index,
     Vec3 output = Vec3();
     bool inverted = false;
     HitRecord result;
-    for (u32 iterator = 0; iterator < 8; iterator++)
+    for (u32 iterator = 0; iterator < 64; iterator++)
     {
         result = RayTrace(r, meshes, materials, meshCount, far, mat, inverted);
         if (result.dist < 0)
@@ -226,47 +226,56 @@ __device__ Vec3 GetColor(Ray r, curandState* const globalState, const u64 index,
             normal = normal * 0.5f + normalT * 0.5f;
         }
         Vec3 diffuse = mat->diffuseTex != ~0 ? textures[mat->diffuseTex].Sample(uv).GetVector() : mat->diffuseColor;
-        f32 metallic = mat->metallicTex != ~0 ? textures[mat->metallicTex].Sample(uv).x : mat->metallic;
-        f32 roughness = mat->roughnessTex != ~0 ? textures[mat->roughnessTex].Sample(uv).x : mat->roughness;
-        roughness *= roughness;
-        //roughness = sqrtf(roughness);
-        f32 transmit = (mat->transmittanceColor.x + mat->transmittanceColor.y + mat->transmittanceColor.z) / 3;
-        transmit = (RandomUniform(globalState, index) < (transmit - metallic/2)) ? 1.0f : 0.0f;
-        f32 doSpecular = (RandomUniform(globalState, index) < metallic) ? 1.0f : 0.0f;
-        f32 ior =  mat->ior;
-        if (!inverted)
+
+        if (mat->shouldTeleport == 0)
         {
-            ior = 1 / ior;
+            f32 metallic = mat->metallicTex != ~0 ? textures[mat->metallicTex].Sample(uv).x : mat->metallic;
+            f32 roughness = mat->roughnessTex != ~0 ? textures[mat->roughnessTex].Sample(uv).x : mat->roughness;
+            roughness *= roughness;
+            //roughness = sqrtf(roughness);
+            f32 transmit = (mat->transmittanceColor.x + mat->transmittanceColor.y + mat->transmittanceColor.z) / 3;
+            transmit = (RandomUniform(globalState, index) < (transmit - metallic / 2)) ? 1.0f : 0.0f;
+            f32 doSpecular = (RandomUniform(globalState, index) < metallic) ? 1.0f : 0.0f;
+            f32 ior = mat->ior;
+            if (!inverted)
+            {
+                ior = 1 / ior;
+            }
+            else
+            {
+                normal = -normal;
+                transmit = 1.0f;
+                diffuse = Vec3(1);
+            }
+
+            Vec3 diffuseRayDir = (normal + RandomDirection(globalState, index)).Normalize();
+            Vec3 specularRayDir;
+            if (transmit != 0)
+            {
+                specularRayDir = r.dir.Refract(normal, ior);
+                doSpecular = transmit;
+                diffuse *= mat->transmittanceColor;
+                inverted = !inverted;
+            }
+            else
+            {
+                specularRayDir = r.dir.Reflect(normal);
+            }
+            specularRayDir = Util::Lerp(specularRayDir, diffuseRayDir, roughness).Normalize();
+
+            r.dir = Util::Lerp(diffuseRayDir, specularRayDir, doSpecular);
+            //r.dir = specularRayDir;
+
+            r.pos = result.pos;
+            if (doSpecular != 0)
+            {
+                r.pos += normal * 0.00001f;
+            }
         }
         else
         {
-            normal = -normal;
-            transmit = 1.0f;
-            diffuse = Vec3(1);
-        }
-
-        Vec3 diffuseRayDir = (normal + RandomDirection(globalState, index)).Normalize();
-        Vec3 specularRayDir;
-        if (transmit != 0)
-        {
-            specularRayDir = r.dir.Refract(normal, ior);
-            doSpecular = transmit;
-            diffuse *= mat->transmittanceColor;
-            inverted = !inverted;
-        }
-        else
-        {
-            specularRayDir = r.dir.Reflect(normal);
-        }
-        specularRayDir = Util::Lerp(specularRayDir, diffuseRayDir, roughness).Normalize();
-
-        r.dir = Util::Lerp(diffuseRayDir, specularRayDir, doSpecular);
-        //r.dir = specularRayDir;
-
-        r.pos = result.pos;
-        if (doSpecular != 0)
-        {
-            r.pos += normal * 0.00001f;
+            r.pos = result.pos + r.dir * 0.00001f;
+            RayTracing::ApplyMaterialDisplacement(r, mat);
         }
 
         // https://www.shadertoy.com/view/WsBBR3
@@ -281,6 +290,10 @@ __device__ Vec3 GetColor(Ray r, curandState* const globalState, const u64 index,
         // Add the energy we 'lose' by randomly terminating paths
         throughput *= 1.0f / p;
     }
+    //if (output.x == 0 && output.y == 0 && output.z == 0)
+    //{
+    //    output = cbs[0].Sample(r.dir).GetVector();
+    //}
     return output;
 }
 

@@ -22,6 +22,10 @@ namespace Resources
 		u32 metallicTex = ~0;
 		u32 roughnessTex = ~0;
 		u32 normalTex = ~0;
+
+		Maths::Quat rotDisplacement;
+		Maths::Vec3 posDisplacement;
+		u32 shouldTeleport = 0;
 	private:
 
 	};
