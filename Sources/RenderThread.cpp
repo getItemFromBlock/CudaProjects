@@ -247,6 +247,8 @@ void RenderThread::RayTracingRealTime()
 			keys.reset(13);
 			denoiseStrength -= 0.05f;
 		}
+		bool screenchot = keys.test(11);
+		keys.reset(11),
 		keyLock.unlock();
 		fov = Util::Clamp(fov + fovDir * deltaTime * fov, 0.5f, 100.0f);
 		Quat q = Quat::FromEuler(Vec3(rotation.x, rotation.y, 0.0f));
@@ -255,10 +257,12 @@ void RenderThread::RayTracingRealTime()
 			dir = dir.Normalize() * deltaTime * 10;
 			position += q * dir;
 		}
+		if ((params & ADVANCED) && (delta.Dot() || dir.Dot() || fovDir))
+			params = (LaunchParams)(params | CLEAR);
 		HandleResize();
 		kernels.RenderMeshes(colorBuffer.data(), static_cast<u32>(meshes.size()), position, q * Vec3(0,0,1), q * Vec3(0,1,0), fov, 1, denoiseStrength, params);
 		CopyToScreen();
-		if (keys.test(11))
+		if (screenchot)
 		{
 			if (!std::filesystem::exists("Screenshots"))
 			{
@@ -267,7 +271,6 @@ void RenderThread::RayTracingRealTime()
 			std::string name = "Screenshots/";
 			name += GetTime();
 			CudaUtil::SaveFrameBuffer(kernels.GetMainFrameBuffer(), name);
-			keys.reset(11);
 		}
 	}
 	UnloadAssets();

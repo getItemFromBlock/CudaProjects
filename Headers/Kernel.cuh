@@ -13,11 +13,12 @@
 
 enum LaunchParams : u8
 {
-	NONE = 0,
-	ADVANCED = 1,
-	INVERTED_RB = 2,
-	BOXDEBUG = 4,
-	DENOISE = 8,
+	NONE =			0x0,
+	ADVANCED =		0x1,
+	INVERTED_RB =	0x2,
+	BOXDEBUG =		0x4,
+	DENOISE =		0x8,
+	CLEAR =			0x10,
 };
 
 class Kernel

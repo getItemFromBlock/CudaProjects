@@ -514,14 +514,12 @@ void Kernel::UpdateMeshVertices(Mesh* mesh, u32 index, const Maths::Vec3& pos, c
     CudaUtil::CheckError(cudaGetLastError(), "VerticeKernel launch failed: %s");
 }
 
-bool wasdebug = true;
 void Kernel::LaunchRTXKernels(const u32 meshCount, const Vec3& pos, const Vec3& front, const Vec3& up, const f32 fov, const u32 quality, const f32 strength, const LaunchParams params)
 {
     const u32 count = mainFB.resolution.x * mainFB.resolution.y;
+    if (params & CLEAR) ClearKernel CUDA_KERNEL((count + M - 1) / M, M) (mainFB, Vec4());
     if (params & ADVANCED)
     {
-        if (wasdebug) ClearKernel CUDA_KERNEL((count + M - 1) / M, M) (mainFB, Vec4());
-        wasdebug = false;
         for (u32 i = 0; i < quality; ++i)
         {
             RayTracingKernel CUDA_KERNEL((count + M - 1) / M, M) (mainFB, device_prngBuffer, device_meshes, device_materials, device_textures, device_cubemaps, pos, front, up, fov, meshCount);
@@ -538,12 +536,10 @@ void Kernel::LaunchRTXKernels(const u32 meshCount, const Vec3& pos, const Vec3& 
     }
     else if (params & BOXDEBUG)
     {
-        wasdebug = true;
         RayTracingKernelDebug CUDA_KERNEL((count + M - 1) / M, M) (surfaceFB, device_meshes, device_materials, pos, front, up, fov, meshCount);
     }
     else
     {
-        wasdebug = true;
         RayTracingKernelPreview CUDA_KERNEL((count + M - 1) / M, M) (surfaceFB, device_meshes, device_materials, device_textures, device_cubemaps, pos, front, up, fov, meshCount);
     }
 }

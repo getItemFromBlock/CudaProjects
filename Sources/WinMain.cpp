@@ -133,6 +133,11 @@ LRESULT CALLBACK WndProc(_In_ HWND hWnd, _In_ UINT message, _In_ WPARAM wParam, 
         if (captured)
         {
             SetCursor(cursorHide);
+            POINT p;
+            if (GetCursorPos(&p))
+            {
+                SetCursorPos(p.x, p.y);
+            }
         }
         else
         {
